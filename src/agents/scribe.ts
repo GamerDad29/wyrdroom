@@ -3,7 +3,7 @@ import { AgentConfig } from '../types';
 export const scribe: AgentConfig = {
   id: 'scribe',
   name: 'Scribe',
-  modelId: 'google/gemma-4-31b-it:free',
+  modelId: 'nvidia/nemotron-3-nano-30b-a3b:free',
   avatarUrl: '/avatars/scribe.svg',
   nameColor: '#c9a84c',
   personality: 'Note-taker, archivist, memory keeper',
