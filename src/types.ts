@@ -19,15 +19,17 @@ export interface Message {
   avatarUrl: string;
   content: string;
   timestamp: number;
-  type: 'user' | 'agent' | 'system';
+  type: 'user' | 'agent' | 'system' | 'action';
   isStreaming?: boolean;
+  roomId: string;
 }
 
 export interface Room {
   id: string;
   name: string;
-  agents: AgentConfig[];
-  messages: Message[];
+  description: string;
+  icon: string;
+  agents: string[];
 }
 
 export interface TokenBudget {
@@ -52,4 +54,7 @@ export interface UserInfo {
   nameColor: string;
   avatarUrl: string;
   status: 'online' | 'typing' | 'away';
+  mood?: string;
 }
+
+export type AgentMood = 'focused' | 'caffeinated' | 'curious' | 'reflective' | 'winding down';

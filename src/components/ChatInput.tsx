@@ -9,6 +9,8 @@ export default function ChatInput({ onSend, disabled }: Props) {
   const [text, setText] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const isCommand = text.startsWith('/');
+
   function handleSend() {
     const trimmed = text.trim();
     if (!trimmed || disabled) return;
@@ -28,9 +30,9 @@ export default function ChatInput({ onSend, disabled }: Props) {
     <div className="chat-input-bar">
       <input
         ref={inputRef}
-        className="chat-input"
+        className={`chat-input ${isCommand ? 'command-mode' : ''}`}
         type="text"
-        placeholder="Type a message..."
+        placeholder="Type a message... (/help for commands)"
         value={text}
         onChange={(e) => setText(e.target.value)}
         onKeyDown={handleKeyDown}
