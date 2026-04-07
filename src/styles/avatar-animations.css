@@ -1,0 +1,32 @@
+/* Avatar expression animations */
+
+.avatar-blink {
+  animation: avatar-blink-anim 0.15s ease-in-out;
+}
+
+@keyframes avatar-blink-anim {
+  0% { ry: inherit; }
+  50% { ry: 0.5; }
+  100% { ry: inherit; }
+}
+
+.avatar-nod {
+  animation: avatar-nod-anim 0.6s ease-in-out;
+}
+
+@keyframes avatar-nod-anim {
+  0% { transform: translateY(0); }
+  30% { transform: translateY(2px); }
+  60% { transform: translateY(0); }
+  80% { transform: translateY(1px); }
+  100% { transform: translateY(0); }
+}
+
+.avatar-talk ellipse {
+  animation: avatar-talk-anim 0.3s ease-in-out infinite alternate;
+}
+
+@keyframes avatar-talk-anim {
+  0% { ry: 1; }
+  100% { ry: 2.5; }
+}

@@ -1,4 +1,5 @@
 import { AgentProfile } from '../agents/profiles';
+import AnimatedAvatar from './AnimatedAvatar';
 
 interface Props {
   profile: AgentProfile;
@@ -19,10 +20,10 @@ export default function AgentProfileModal({ profile, onClose }: Props) {
           {/* Left: avatar + basic info */}
           <div className="modal-left">
             <div className="modal-avatar-frame">
-              <img
+              <AnimatedAvatar
+                agentId={profile.id}
+                size={112}
                 className="modal-avatar"
-                src={profile.avatarUrl}
-                alt={profile.name}
               />
               <div className="modal-avatar-scanline" />
             </div>

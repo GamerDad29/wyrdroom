@@ -1,23 +1,24 @@
 import { UserInfo } from '../types';
+import { Expression } from '../services/expressionService';
+import AnimatedAvatar from './AnimatedAvatar';
 
 interface Props {
   users: UserInfo[];
   onClickAgent: (agentId: string) => void;
+  getExpression: (agentId: string) => Expression;
 }
 
-export default function UserList({ users, onClickAgent }: Props) {
+export default function UserList({ users, onClickAgent, getExpression }: Props) {
   return (
     <div className="user-list">
       <div className="user-list-header">In This Room</div>
       {users.map((user) => (
         <div key={user.id} className="user-card">
-          <img
+          <AnimatedAvatar
+            agentId={user.id}
+            size={40}
+            expression={getExpression(user.id)}
             className="user-card-avatar"
-            src={user.avatarUrl}
-            alt={user.name}
-            onError={(e) => {
-              (e.target as HTMLImageElement).src = '/avatars/user.svg';
-            }}
           />
           <div className="user-card-info">
             <div

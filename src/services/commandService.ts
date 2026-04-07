@@ -1,10 +1,13 @@
 import { getUsage, resetSession } from './tokenBudget';
 import { agents } from '../agents';
+import { setVaultApiKey } from './vaultService';
 
 export interface CommandResult {
-  type: 'system' | 'action' | 'clear' | 'notes' | 'export' | 'none';
+  type: 'system' | 'action' | 'clear' | 'notes' | 'export' | 'vault' | 'none';
   content: string;
   targetAgent?: string;
+  vaultAction?: 'search' | 'read' | 'write' | 'list' | 'save-notes';
+  vaultPath?: string;
 }
 
 export function parseCommand(input: string, _userId: string, userName: string): CommandResult | null {
@@ -48,6 +51,55 @@ export function parseCommand(input: string, _userId: string, userName: string): 
       return { type: 'system', content: 'Session token budgets reset for all agents.' };
     }
 
+    case '/vault': {
+      const subParts = rest.split(/\s+/);
+      const subCmd = subParts[0]?.toLowerCase();
+      const subRest = subParts.slice(1).join(' ');
+
+      if (!subCmd) {
+        return {
+          type: 'system',
+          content: [
+            'VAULT COMMANDS',
+            '/vault key <key> ..... Set Obsidian REST API key',
+            '/vault search <q> .... Search vault for notes',
+            '/vault read <path> ... Read a note into chat',
+            '/vault write <path> .. Write last Scribe notes to vault',
+            '/vault list [folder] . List files in vault',
+            '/vault save .......... Save last notes to vault (APOC folder)',
+          ].join('\n'),
+        };
+      }
+
+      switch (subCmd) {
+        case 'key':
+          if (!subRest) return { type: 'system', content: 'Usage: /vault key <your-api-key>' };
+          setVaultApiKey(subRest);
+          return { type: 'system', content: 'Vault API key saved.' };
+
+        case 'search':
+          if (!subRest) return { type: 'system', content: 'Usage: /vault search <query>' };
+          return { type: 'vault', content: subRest, vaultAction: 'search' };
+
+        case 'read':
+          if (!subRest) return { type: 'system', content: 'Usage: /vault read <path/to/note.md>' };
+          return { type: 'vault', content: subRest, vaultAction: 'read', vaultPath: subRest };
+
+        case 'write':
+          if (!subRest) return { type: 'system', content: 'Usage: /vault write <path/to/note.md>' };
+          return { type: 'vault', content: subRest, vaultAction: 'write', vaultPath: subRest };
+
+        case 'list':
+          return { type: 'vault', content: subRest || '', vaultAction: 'list', vaultPath: subRest || undefined };
+
+        case 'save':
+          return { type: 'vault', content: 'save', vaultAction: 'save-notes' };
+
+        default:
+          return { type: 'system', content: `Unknown vault command: ${subCmd}. Type /vault for help.` };
+      }
+    }
+
     case '/help':
       return {
         type: 'system',
@@ -57,9 +109,10 @@ export function parseCommand(input: string, _userId: string, userName: string): 
           '/clear ........... Clear chat history',
           '/reset ........... Reset conversation (agents forget)',
           '/notes [topic] ... Ask Scribe to compile session notes',
-          '/export .......... Download last notes as .md for Obsidian',
+          '/export .......... Download last notes as .md',
           '/budget .......... Show token usage',
           '/resetbudget ..... Reset session token budgets',
+          '/vault ........... Obsidian vault commands (type /vault for list)',
           '/help ............ Show this message',
           '',
           'TALKING TO AGENTS',
@@ -79,13 +132,11 @@ export function parseCommand(input: string, _userId: string, userName: string): 
 }
 
 export function parseTargetAgent(text: string): { agentId: string | null; cleanText: string; heyAll: boolean } {
-  // Check for "hey all", "hey everyone", "hey everybody"
   const heyAllPattern = /^hey\s+(all|everyone|everybody|team|crew|gang|y'all)\b/i;
   if (heyAllPattern.test(text.trim())) {
     return { agentId: null, cleanText: text, heyAll: true };
   }
 
-  // Check for @agent targeting
   const match = text.match(/^@(\w+)\s+([\s\S]+)/);
   if (!match) return { agentId: null, cleanText: text, heyAll: false };
 

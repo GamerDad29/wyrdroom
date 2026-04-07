@@ -6,6 +6,7 @@ import { sendMessageToAgent } from '../services/chatService';
 import { checkHealth } from '../services/proxyService';
 import { parseCommand, parseTargetAgent } from '../services/commandService';
 import { buildNotesPrompt, downloadAsMarkdown, generateExportFilename } from '../services/noteService';
+import { isVaultAvailable, vaultSearch, vaultRead, vaultWrite, vaultList } from '../services/vaultService';
 import { getAgentMood, getMoodEmoji } from '../services/moodService';
 import {
   playEnterRoom, playMessageSend, playAgentTone,
@@ -418,6 +419,93 @@ export function useChat() {
     };
   }, [activeRoomId, messagesByRoom, sendToAgentPromise]);
 
+  const addSystemMessage = useCallback((content: string) => {
+    setRoomMessages(activeRoomId, (prev) => [
+      ...prev,
+      {
+        id: generateId(),
+        senderId: 'system',
+        senderName: 'System',
+        senderColor: '#5a6a4a',
+        avatarUrl: '',
+        content,
+        timestamp: Date.now(),
+        type: 'system',
+        roomId: activeRoomId,
+      },
+    ]);
+  }, [activeRoomId, setRoomMessages]);
+
+  const handleVaultCommand = useCallback(async (
+    action: string,
+    path?: string,
+    content?: string,
+  ) => {
+    const available = await isVaultAvailable();
+    if (!available) {
+      addSystemMessage('Obsidian vault not detected. Make sure Obsidian is running with the Local REST API plugin enabled.');
+      return;
+    }
+
+    try {
+      switch (action) {
+        case 'search': {
+          const results = await vaultSearch(content || '');
+          if (results.length === 0) {
+            addSystemMessage(`No results for "${content}"`);
+          } else {
+            const lines = results.map((r) => `  ${r.filename}`);
+            addSystemMessage(`VAULT SEARCH: "${content}"\n${lines.join('\n')}`);
+          }
+          break;
+        }
+        case 'read': {
+          if (!path) return;
+          const text = await vaultRead(path);
+          const preview = text.length > 2000 ? text.slice(0, 2000) + '\n... (truncated)' : text;
+          addSystemMessage(`VAULT: ${path}\n${preview}`);
+          break;
+        }
+        case 'write': {
+          if (!path || !lastNotes) {
+            addSystemMessage('No notes to write. Run /notes first.');
+            return;
+          }
+          await vaultWrite(path, lastNotes);
+          addSystemMessage(`Notes written to vault: ${path}`);
+          break;
+        }
+        case 'list': {
+          const result = await vaultList(path);
+          const files = result.files || [];
+          if (files.length === 0) {
+            addSystemMessage(`Vault folder "${path || '/'}" is empty or not found.`);
+          } else {
+            const lines = files.slice(0, 30).map((f) => `  ${f}`);
+            const more = files.length > 30 ? `\n  ... and ${files.length - 30} more` : '';
+            addSystemMessage(`VAULT: ${path || '/'}\n${lines.join('\n')}${more}`);
+          }
+          break;
+        }
+        case 'save-notes': {
+          if (!lastNotes) {
+            addSystemMessage('No notes to save. Run /notes first.');
+            return;
+          }
+          const room = rooms.find((r) => r.id === activeRoomId);
+          const date = new Date().toISOString().slice(0, 10);
+          const slug = (room?.name || 'chat').toLowerCase().replace(/\s+/g, '-');
+          const vaultPath = `APOC/apoc-${slug}-${date}.md`;
+          await vaultWrite(vaultPath, lastNotes);
+          addSystemMessage(`Notes saved to vault: ${vaultPath}`);
+          break;
+        }
+      }
+    } catch (err) {
+      addSystemMessage(`Vault error: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }, [addSystemMessage, lastNotes, activeRoomId]);
+
   const sendMessage = useCallback(
     (text: string) => {
       if (streamingRef.current) return;
@@ -538,21 +626,13 @@ export function useChat() {
           return;
         }
 
+        if (cmdResult.type === 'vault') {
+          handleVaultCommand(cmdResult.vaultAction!, cmdResult.vaultPath, cmdResult.content);
+          return;
+        }
+
         if (cmdResult.type === 'system') {
-          setRoomMessages(activeRoomId, (prev) => [
-            ...prev,
-            {
-              id: generateId(),
-              senderId: 'system',
-              senderName: 'System',
-              senderColor: '#5a6a4a',
-              avatarUrl: '',
-              content: cmdResult.content,
-              timestamp: Date.now(),
-              type: 'system',
-              roomId: activeRoomId,
-            },
-          ]);
+          addSystemMessage(cmdResult.content);
           return;
         }
 

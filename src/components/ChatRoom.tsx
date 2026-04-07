@@ -1,5 +1,6 @@
 import { useRef, useEffect, useState, useMemo, useCallback } from 'react';
 import { useChat } from '../hooks/useChat';
+import { useExpressions } from '../hooks/useExpressions';
 import MessageBubble from './MessageBubble';
 import SystemMessage from './SystemMessage';
 import UserList from './UserList';
@@ -23,6 +24,8 @@ export default function ChatRoom() {
     switchRoom,
     sendMessage,
   } = useChat();
+
+  const { getExpression, onMessage, onTyping, onStopTyping } = useExpressions();
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatRef = useRef<HTMLDivElement>(null);
@@ -52,6 +55,30 @@ export default function ChatRoom() {
     }
     return ids;
   }, [messages, searchQuery]);
+
+  // Detect expressions from new messages
+  const prevMsgCountRef = useRef(messages.length);
+  useEffect(() => {
+    if (messages.length > prevMsgCountRef.current) {
+      const newMessages = messages.slice(prevMsgCountRef.current);
+      for (const msg of newMessages) {
+        onMessage(msg);
+      }
+    }
+    prevMsgCountRef.current = messages.length;
+  }, [messages, onMessage]);
+
+  // Typing state drives expression
+  useEffect(() => {
+    if (typingAgent) {
+      const agent = users.find((u) => u.name === typingAgent);
+      if (agent) onTyping(agent.id);
+    } else {
+      users.forEach((u) => {
+        if (u.status !== 'typing') onStopTyping(u.id);
+      });
+    }
+  }, [typingAgent, users, onTyping, onStopTyping]);
 
   useEffect(() => {
     if (autoScrollRef.current) {
@@ -178,6 +205,7 @@ export default function ChatRoom() {
                   message={msg}
                   searchQuery={searchMatches.has(msg.id) ? searchQuery : undefined}
                   onClickAgent={handleClickAgent}
+                  expression={msg.isStreaming ? getExpression(msg.senderId) : undefined}
                 />
               );
             })}
@@ -195,7 +223,7 @@ export default function ChatRoom() {
             className={`sidebar-drag-handle ${isDragging.current ? 'dragging' : ''}`}
             onMouseDown={handleDragStart}
           />
-          <UserList users={users} onClickAgent={handleClickAgent} />
+          <UserList users={users} onClickAgent={handleClickAgent} getExpression={getExpression} />
         </div>
       </div>
 
