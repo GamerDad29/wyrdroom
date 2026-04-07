@@ -4,7 +4,7 @@
 // The plugin also supports non-encrypted HTTP if enabled in settings.
 
 // Try HTTPS first (default), fall back to HTTP
-const VAULT_URLS = ['https://127.0.0.1:27124', 'http://127.0.0.1:27124'];
+const VAULT_URLS = ['http://127.0.0.1:27123', 'https://127.0.0.1:27124', 'http://127.0.0.1:27124'];
 let activeVaultUrl: string | null = null;
 
 let apiKey = localStorage.getItem('apoc_vault_key') || '';
