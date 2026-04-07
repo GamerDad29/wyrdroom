@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <!-- Background -->
+  <rect width="64" height="64" fill="#0a0e0a"/>
+  <rect x="2" y="2" width="60" height="60" fill="#141420" rx="2" stroke="#2a2a4f" stroke-width="1"/>
+  <!-- Pip-Boy frame -->
+  <rect x="4" y="4" width="56" height="56" fill="none" stroke="#3a3a6a" stroke-width="0.5" rx="1"/>
+  <!-- Head -->
+  <circle cx="32" cy="24" r="11" fill="#7b8cde" opacity="0.9"/>
+  <!-- Spiky hair - lateral thinker energy -->
+  <polygon points="22,18 25,8 28,16" fill="#5a6abe"/>
+  <polygon points="28,15 32,6 36,15" fill="#5a6abe"/>
+  <polygon points="36,16 39,8 42,18" fill="#5a6abe"/>
+  <!-- Eyes - slightly narrowed, sardonic -->
+  <line x1="26" y1="23" x2="30" y2="23" stroke="#0a0e0a" stroke-width="2" stroke-linecap="round"/>
+  <line x1="34" y1="23" x2="38" y2="23" stroke="#0a0e0a" stroke-width="2" stroke-linecap="round"/>
+  <!-- Smirk -->
+  <path d="M28 28 Q30 29 36 27" fill="none" stroke="#0a0e0a" stroke-width="1.2" stroke-linecap="round"/>
+  <!-- Body -->
+  <rect x="22" y="36" width="20" height="20" rx="3" fill="#7b8cde" opacity="0.9"/>
+  <!-- Jacket collar -->
+  <path d="M22 38 L28 42 L32 39 L36 42 L42 38" fill="none" stroke="#5a6abe" stroke-width="1.2"/>
+  <!-- Scanlines -->
+  <line x1="4" y1="15" x2="60" y2="15" stroke="#0a0e0a" stroke-width="0.3" opacity="0.3"/>
+  <line x1="4" y1="30" x2="60" y2="30" stroke="#0a0e0a" stroke-width="0.3" opacity="0.3"/>
+  <line x1="4" y1="45" x2="60" y2="45" stroke="#0a0e0a" stroke-width="0.3" opacity="0.3"/>
+</svg>

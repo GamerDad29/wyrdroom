@@ -1,10 +1,12 @@
 import { AgentConfig } from '../types';
 import { gemma } from './gemma';
-// import { mistral } from './mistral';  // uncomment when ready
+import { mistral } from './mistral';
+import { scribe } from './scribe';
 
 export const agents: AgentConfig[] = [
   gemma,
-  // mistral,
+  mistral,
+  scribe,
 ];
 
 export function getAgent(id: string): AgentConfig | undefined {

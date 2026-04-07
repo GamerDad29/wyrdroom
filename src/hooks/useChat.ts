@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Message, UserInfo } from '../types';
-import { agents } from '../agents';
+import { agents, getAgent } from '../agents';
 import { rooms } from '../services/rooms';
 import { sendMessageToAgent } from '../services/chatService';
 import { checkHealth } from '../services/proxyService';
-import { parseCommand } from '../services/commandService';
+import { parseCommand, parseTargetAgent } from '../services/commandService';
+import { buildNotesPrompt, downloadAsMarkdown, generateExportFilename } from '../services/noteService';
 import { getAgentMood, getMoodEmoji } from '../services/moodService';
 import { playEnterRoom, playMessageSend, playMessageReceive, playRoomSwitch, playError } from '../services/soundService';
 
@@ -70,21 +71,19 @@ export function useChat() {
   });
   const [typingAgent, setTypingAgent] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState(true);
+  const [lastNotes, setLastNotes] = useState<string>('');
   const streamingRef = useRef(false);
 
   const messages = messagesByRoom[activeRoomId] || [];
 
-  // Persist on change
   useEffect(() => {
     saveMessages(activeRoomId, messages);
   }, [activeRoomId, messages]);
 
-  // Health check
   useEffect(() => {
     checkHealth().then(setIsConnected).catch(() => setIsConnected(true));
   }, []);
 
-  // Play enter sound on mount
   useEffect(() => {
     playEnterRoom();
   }, []);
@@ -113,6 +112,19 @@ export function useChat() {
       .map((agentId) => {
         const agent = agents.find((a) => a.id === agentId);
         if (!agent) return null;
+
+        // Scribe doesn't have mood, just status
+        if (agent.id === 'scribe') {
+          return {
+            id: agent.id,
+            name: agent.name,
+            nameColor: agent.nameColor,
+            avatarUrl: agent.avatarUrl,
+            status: typingAgent === agent.name ? ('typing' as const) : ('online' as const),
+            mood: '\u270D recording',
+          };
+        }
+
         const mood = getAgentMood(agentMessageCount);
         return {
           id: agent.id,
@@ -135,6 +147,89 @@ export function useChat() {
 
     return [...agentUsers, christopherUser];
   }, [typingAgent, activeRoomId, agentMessageCount]);
+
+  const sendToAgent = useCallback((
+    agent: ReturnType<typeof getAgent>,
+    allMessages: Message[],
+    roomId: string,
+  ) => {
+    if (!agent) return;
+
+    streamingRef.current = true;
+    setTypingAgent(agent.name);
+
+    const agentMsgId = generateId();
+    let accumulated = '';
+    let streamStarted = false;
+
+    sendMessageToAgent(
+      agent,
+      allMessages,
+      (chunk) => {
+        accumulated += chunk;
+        if (!streamStarted) {
+          streamStarted = true;
+          setTypingAgent(null);
+          playMessageReceive();
+        }
+        setRoomMessages(roomId, (prev) => {
+          const existing = prev.find((m) => m.id === agentMsgId);
+          if (existing) {
+            return prev.map((m) =>
+              m.id === agentMsgId ? { ...m, content: accumulated } : m,
+            );
+          }
+          return [
+            ...prev,
+            {
+              id: agentMsgId,
+              senderId: agent.id,
+              senderName: agent.name,
+              senderColor: agent.nameColor,
+              avatarUrl: agent.avatarUrl,
+              content: accumulated,
+              timestamp: Date.now(),
+              type: 'agent' as const,
+              isStreaming: true,
+              roomId,
+            },
+          ];
+        });
+      },
+      () => {
+        streamingRef.current = false;
+        setTypingAgent(null);
+        // If this was Scribe, save the notes
+        if (agent.id === 'scribe') {
+          setLastNotes(accumulated);
+        }
+        setRoomMessages(roomId, (prev) =>
+          prev.map((m) =>
+            m.id === agentMsgId ? { ...m, isStreaming: false } : m,
+          ),
+        );
+      },
+      (error) => {
+        streamingRef.current = false;
+        setTypingAgent(null);
+        playError();
+        setRoomMessages(roomId, (prev) => [
+          ...prev,
+          {
+            id: generateId(),
+            senderId: 'system',
+            senderName: 'System',
+            senderColor: '#5a6a4a',
+            avatarUrl: '',
+            content: `Error: ${error}`,
+            timestamp: Date.now(),
+            type: 'system',
+            roomId,
+          },
+        ]);
+      },
+    );
+  }, [setRoomMessages]);
 
   const sendMessage = useCallback(
     (text: string) => {
@@ -181,6 +276,79 @@ export function useChat() {
           return;
         }
 
+        if (cmdResult.type === 'notes') {
+          // Ask Scribe to compile notes
+          const scribeAgent = getAgent('scribe');
+          if (!scribeAgent) return;
+          const room = rooms.find((r) => r.id === activeRoomId);
+          const notesPrompt = buildNotesPrompt(messages, room?.name || 'chat');
+          const notesMsg: Message = {
+            id: generateId(),
+            senderId: USER_ID,
+            senderName: USER_NAME,
+            senderColor: USER_COLOR,
+            avatarUrl: USER_AVATAR,
+            content: notesPrompt,
+            timestamp: Date.now(),
+            type: 'user',
+            roomId: activeRoomId,
+          };
+          setRoomMessages(activeRoomId, (prev) => [
+            ...prev,
+            {
+              id: generateId(),
+              senderId: 'system',
+              senderName: 'System',
+              senderColor: '#5a6a4a',
+              avatarUrl: '',
+              content: 'Scribe is compiling notes...',
+              timestamp: Date.now(),
+              type: 'system',
+              roomId: activeRoomId,
+            },
+          ]);
+          sendToAgent(scribeAgent, [...messages, notesMsg], activeRoomId);
+          return;
+        }
+
+        if (cmdResult.type === 'export') {
+          if (!lastNotes) {
+            setRoomMessages(activeRoomId, (prev) => [
+              ...prev,
+              {
+                id: generateId(),
+                senderId: 'system',
+                senderName: 'System',
+                senderColor: '#5a6a4a',
+                avatarUrl: '',
+                content: 'No notes to export. Run /notes first.',
+                timestamp: Date.now(),
+                type: 'system',
+                roomId: activeRoomId,
+              },
+            ]);
+            return;
+          }
+          const room = rooms.find((r) => r.id === activeRoomId);
+          const filename = generateExportFilename(room?.name || 'chat');
+          downloadAsMarkdown(lastNotes, filename);
+          setRoomMessages(activeRoomId, (prev) => [
+            ...prev,
+            {
+              id: generateId(),
+              senderId: 'system',
+              senderName: 'System',
+              senderColor: '#5a6a4a',
+              avatarUrl: '',
+              content: `Notes exported: ${filename}`,
+              timestamp: Date.now(),
+              type: 'system',
+              roomId: activeRoomId,
+            },
+          ]);
+          return;
+        }
+
         if (cmdResult.type === 'system') {
           setRoomMessages(activeRoomId, (prev) => [
             ...prev,
@@ -202,7 +370,9 @@ export function useChat() {
         return;
       }
 
-      // Regular message
+      // Regular message -- check for @agent targeting
+      const { agentId: targetId, cleanText } = parseTargetAgent(text);
+
       const userMsg: Message = {
         id: generateId(),
         senderId: USER_ID,
@@ -218,86 +388,29 @@ export function useChat() {
       setRoomMessages(activeRoomId, (prev) => [...prev, userMsg]);
       playMessageSend();
 
-      // Find agent for this room
+      // Determine which agent to route to
       const room = rooms.find((r) => r.id === activeRoomId);
-      const agentId = room?.agents[0];
-      const agent = agents.find((a) => a.id === agentId);
+      let agent;
+
+      if (targetId) {
+        // Explicit @mention
+        agent = getAgent(targetId);
+      } else {
+        // Default: first non-scribe agent in the room
+        const defaultAgentId = room?.agents.find((id) => id !== 'scribe');
+        agent = defaultAgentId ? getAgent(defaultAgentId) : undefined;
+      }
+
       if (!agent) return;
 
-      streamingRef.current = true;
-      setTypingAgent(agent.name);
+      // Build message list with clean text if targeted
+      const messagesForAgent = targetId
+        ? [...messages, { ...userMsg, content: cleanText }]
+        : [...messages, userMsg];
 
-      const agentMsgId = generateId();
-      let accumulated = '';
-      let streamStarted = false;
-
-      const allMessages = [...messages, userMsg];
-
-      sendMessageToAgent(
-        agent,
-        allMessages,
-        (chunk) => {
-          accumulated += chunk;
-          if (!streamStarted) {
-            streamStarted = true;
-            setTypingAgent(null);
-            playMessageReceive();
-          }
-          setRoomMessages(activeRoomId, (prev) => {
-            const existing = prev.find((m) => m.id === agentMsgId);
-            if (existing) {
-              return prev.map((m) =>
-                m.id === agentMsgId ? { ...m, content: accumulated } : m,
-              );
-            }
-            return [
-              ...prev,
-              {
-                id: agentMsgId,
-                senderId: agent.id,
-                senderName: agent.name,
-                senderColor: agent.nameColor,
-                avatarUrl: agent.avatarUrl,
-                content: accumulated,
-                timestamp: Date.now(),
-                type: 'agent' as const,
-                isStreaming: true,
-                roomId: activeRoomId,
-              },
-            ];
-          });
-        },
-        () => {
-          streamingRef.current = false;
-          setTypingAgent(null);
-          setRoomMessages(activeRoomId, (prev) =>
-            prev.map((m) =>
-              m.id === agentMsgId ? { ...m, isStreaming: false } : m,
-            ),
-          );
-        },
-        (error) => {
-          streamingRef.current = false;
-          setTypingAgent(null);
-          playError();
-          setRoomMessages(activeRoomId, (prev) => [
-            ...prev,
-            {
-              id: generateId(),
-              senderId: 'system',
-              senderName: 'System',
-              senderColor: '#5a6a4a',
-              avatarUrl: '',
-              content: `Error: ${error}`,
-              timestamp: Date.now(),
-              type: 'system',
-              roomId: activeRoomId,
-            },
-          ]);
-        },
-      );
+      sendToAgent(agent, messagesForAgent, activeRoomId);
     },
-    [messages, activeRoomId, setRoomMessages],
+    [messages, activeRoomId, setRoomMessages, sendToAgent, lastNotes],
   );
 
   return {

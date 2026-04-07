@@ -1,9 +1,27 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
-  <rect width="64" height="64" fill="#1a1a2e"/>
-  <rect x="4" y="4" width="56" height="56" fill="#0a2a1e" rx="2"/>
-  <circle cx="32" cy="26" r="12" fill="#00ff88"/>
-  <rect x="18" y="42" width="28" height="18" rx="4" fill="#00ff88"/>
-  <circle cx="27" cy="24" r="2" fill="#1a1a2e"/>
-  <circle cx="37" cy="24" r="2" fill="#1a1a2e"/>
-  <rect x="28" y="29" width="8" height="2" rx="1" fill="#1a1a2e"/>
+  <!-- Background -->
+  <rect width="64" height="64" fill="#0a0e0a"/>
+  <rect x="2" y="2" width="60" height="60" fill="#0a1a0f" rx="2" stroke="#2a3f2a" stroke-width="1"/>
+  <!-- Pip-Boy frame -->
+  <rect x="4" y="4" width="56" height="56" fill="none" stroke="#3a5a3a" stroke-width="0.5" rx="1"/>
+  <!-- Head -->
+  <circle cx="32" cy="24" r="11" fill="#44ff88" opacity="0.85"/>
+  <!-- Short hair -->
+  <path d="M21 20 Q22 13 32 12 Q42 13 43 20 L43 18 Q42 11 32 10 Q22 11 21 18 Z" fill="#33cc66"/>
+  <!-- Eyes - determined -->
+  <circle cx="28" cy="23" r="1.5" fill="#0a0e0a"/>
+  <circle cx="36" cy="23" r="1.5" fill="#0a0e0a"/>
+  <!-- Confident grin -->
+  <path d="M27 28 Q32 32 37 28" fill="none" stroke="#0a0e0a" stroke-width="1.2" stroke-linecap="round"/>
+  <!-- Body - casual -->
+  <rect x="22" y="36" width="20" height="20" rx="3" fill="#44ff88" opacity="0.85"/>
+  <!-- T-shirt collar -->
+  <path d="M28 36 L32 39 L36 36" fill="none" stroke="#33cc66" stroke-width="1"/>
+  <!-- Headphones around neck (the builder) -->
+  <path d="M24 34 Q24 30 28 30" fill="none" stroke="#2a3f2a" stroke-width="1.5" stroke-linecap="round"/>
+  <path d="M40 34 Q40 30 36 30" fill="none" stroke="#2a3f2a" stroke-width="1.5" stroke-linecap="round"/>
+  <!-- Scanlines -->
+  <line x1="4" y1="15" x2="60" y2="15" stroke="#0a0e0a" stroke-width="0.3" opacity="0.3"/>
+  <line x1="4" y1="30" x2="60" y2="30" stroke="#0a0e0a" stroke-width="0.3" opacity="0.3"/>
+  <line x1="4" y1="45" x2="60" y2="45" stroke="#0a0e0a" stroke-width="0.3" opacity="0.3"/>
 </svg>
