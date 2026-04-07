@@ -242,38 +242,6 @@ export function useChat() {
     );
   }, [setRoomMessages]);
 
-  // "Hey all" -- send to multiple agents sequentially
-  const sendToAll = useCallback((
-    _userMsg: Message,
-    allMessages: Message[],
-    roomId: string,
-  ) => {
-    const room = rooms.find((r) => r.id === roomId);
-    if (!room) return;
-
-    // Get all non-scribe agents in the room
-    const respondingAgents = room.agents
-      .filter((id) => id !== 'scribe')
-      .map((id) => getAgent(id))
-      .filter(Boolean) as NonNullable<ReturnType<typeof getAgent>>[];
-
-    if (respondingAgents.length === 0) return;
-
-    playHeyAll();
-
-    // Chain agent responses sequentially
-    let chain = Promise.resolve();
-    for (const agent of respondingAgents) {
-      chain = chain.then(() => new Promise<void>((resolve) => {
-        // Wait a beat between agents
-        setTimeout(() => {
-          const currentMessages = messagesByRoom[roomId] || allMessages;
-          sendToAgentPromise(agent, currentMessages, roomId).then(resolve);
-        }, 500);
-      }));
-    }
-  }, [messagesByRoom]);
-
   // Promise-based sendToAgent for chaining
   const sendToAgentPromise = useCallback((
     agent: NonNullable<ReturnType<typeof getAgent>>,
@@ -363,6 +331,33 @@ export function useChat() {
       );
     });
   }, [setRoomMessages]);
+
+  // "Hey all" -- send to multiple agents sequentially
+  const sendToAll = useCallback((
+    _userMsg: Message,
+    allMessages: Message[],
+    roomId: string,
+  ) => {
+    const room = rooms.find((r) => r.id === roomId);
+    if (!room) return;
+
+    const respondingAgents = room.agents
+      .filter((id) => id !== 'scribe')
+      .map((id) => getAgent(id))
+      .filter(Boolean) as NonNullable<ReturnType<typeof getAgent>>[];
+
+    if (respondingAgents.length === 0) return;
+
+    playHeyAll();
+
+    sendToAgentPromise(respondingAgents[0], allMessages, roomId).then(() => {
+      for (let i = 1; i < respondingAgents.length; i++) {
+        setTimeout(() => {
+          sendToAgentPromise(respondingAgents[i], allMessages, roomId);
+        }, i * 800);
+      }
+    });
+  }, [sendToAgentPromise]);
 
   // Idle chatter: agents talk to each other when user is quiet
   useEffect(() => {
