@@ -20,6 +20,9 @@ jobs:
 
       - run: npm ci
       - run: npm run build
+        env:
+          VITE_WORKER_URL: https://apoc-proxy.gamerdad29.workers.dev
+          VITE_PROXY_SECRET: ${{ secrets.VITE_PROXY_SECRET }}
 
       - uses: cloudflare/wrangler-action@v3
         with:
