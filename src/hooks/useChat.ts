@@ -13,6 +13,7 @@ import {
   playRoomSwitch, playError, playHeyAll, playIdleChatter,
   playAgentEnter,
 } from '../services/soundService';
+import { pickEmote } from '../services/emoteService';
 
 const USER_ID = 'christopher';
 const USER_NAME = 'Christopher';
@@ -363,6 +364,7 @@ export function useChat() {
   // Idle chatter: agents occasionally talk when user is quiet
   // Capped at 1 idle message per 5 minutes, max 3 per session
   const idleCountRef = useRef(0);
+  const emoteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const MAX_IDLE_PER_SESSION = 3;
 
   useEffect(() => {
@@ -425,6 +427,54 @@ export function useChat() {
       if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
     };
   }, [activeRoomId, messagesByRoom, sendToAgentPromise]);
+
+  // Ambient emotes: agents do small actions periodically (no API cost)
+  useEffect(() => {
+    function scheduleEmote() {
+      if (emoteTimerRef.current) clearTimeout(emoteTimerRef.current);
+
+      // 30-90 seconds between emotes
+      const delay = 30000 + Math.random() * 60000;
+
+      emoteTimerRef.current = setTimeout(() => {
+        if (streamingRef.current) return;
+
+        const room = rooms.find((r) => r.id === activeRoomId);
+        if (!room) return;
+
+        // Pick a random agent from the room
+        const agentId = room.agents[Math.floor(Math.random() * room.agents.length)];
+        const agent = agents.find((a) => a.id === agentId);
+        if (!agent) return;
+
+        const emoteText = pickEmote(agentId);
+        if (!emoteText) return;
+
+        setRoomMessages(activeRoomId, (prev) => [
+          ...prev,
+          {
+            id: generateId(),
+            senderId: agent.id,
+            senderName: agent.name,
+            senderColor: agent.nameColor,
+            avatarUrl: agent.avatarUrl,
+            content: `* ${agent.name} ${emoteText} *`,
+            timestamp: Date.now(),
+            type: 'action' as const,
+            roomId: activeRoomId,
+          },
+        ]);
+
+        scheduleEmote();
+      }, delay);
+    }
+
+    scheduleEmote();
+
+    return () => {
+      if (emoteTimerRef.current) clearTimeout(emoteTimerRef.current);
+    };
+  }, [activeRoomId, setRoomMessages]);
 
   const addSystemMessage = useCallback((content: string) => {
     setRoomMessages(activeRoomId, (prev) => [
