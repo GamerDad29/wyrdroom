@@ -226,8 +226,9 @@ export function useChat() {
           if (userAskedForVault && accumulated.length > 50) {
             const room = rooms.find((r) => r.id === roomId);
             const date = new Date().toISOString().slice(0, 10);
+            const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }).replace(':', '');
             const slug = (room?.name || 'chat').toLowerCase().replace(/\s+/g, '-');
-            const vaultPath = `APOC/apoc-${slug}-${date}.md`;
+            const vaultPath = `APOC/Scribe Notes/${date}-${slug}-${time}.md`;
             isVaultAvailable().then(available => {
               if (available) {
                 vaultWrite(vaultPath, accumulated).then(() => {
@@ -595,8 +596,9 @@ export function useChat() {
           }
           const room = rooms.find((r) => r.id === activeRoomId);
           const date = new Date().toISOString().slice(0, 10);
+          const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }).replace(':', '');
           const slug = (room?.name || 'chat').toLowerCase().replace(/\s+/g, '-');
-          const vaultPath = `APOC/apoc-${slug}-${date}.md`;
+          const vaultPath = `APOC/Scribe Notes/${date}-${slug}-${time}.md`;
           await vaultWrite(vaultPath, lastNotes);
           addSystemMessage(`Notes saved to vault: ${vaultPath}`);
           break;
