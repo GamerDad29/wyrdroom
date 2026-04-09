@@ -1,5 +1,49 @@
 # APOC Session Log
 
+## 2026-04-08 — The War Room
+
+### Accomplished
+- 4 new agents: Cipher, Oracle, Jinx, Sage (v0.7), then Flux, Drift, Patch, Echo (v0.8)
+- 11 total agents across 4 rooms (Main, Project, Makers, Vision Space)
+- 1,101 ambient emotes (100 per agent)
+- Full Vault-Tec UI overhaul (navy/blue/yellow palette)
+- 22 expression types, mouse-tracking eyes, Christopher's cape
+- 6 new commands: /iterate, /freeform, /mute, /unmute, /stop, /save
+- Complete prompt architecture rewrite (prompting guide + interaction tuning)
+- CI auto-deploy via GitHub Actions + Cloudflare Pages
+- Scribe Notes vault folder for clean Obsidian integration
+- Cloudflare Access protecting production
+- Multiple model swaps (Mistral, Sage, Cipher) to resolve quality issues
+
+### Known Issues
+- Sage and Oracle share same model (Gemma 4 26B), monitor for blending
+- Iteration agents still sometimes repeat themes across rounds
+- Sidebar gets long with 11 agents + Christopher on smaller screens
+
+### Next Steps
+
+**The Intelligence Layer** (next session)
+- Herald agent: News intelligence via Brave Search API (worker route, API key)
+- Signal agent: Reddit intelligence via public JSON API (worker route, subreddit config)
+- Both follow same pattern: agent fetches external data through worker, then responds conversationally
+
+**The Creator** (same or next session)
+- Prism agent: Image generation via Cloudflare Workers AI (FLUX.1 Schnell)
+- Requires [ai] binding in wrangler.toml, new /api/image worker route
+- Image rendering in MessageBubble.tsx
+
+**The Memory** (future session)
+- Persistent memory via Cloudflare D1 (SQLite on edge)
+- Tables: memories (agent_id, content, topic_tags, importance) + sessions (summary)
+- Agents recall previous sessions, Scribe auto-stores key decisions
+- Biggest single remaining feature
+
+**Polish**
+- Mobile responsive pass (sidebar collapse for small screens)
+- Rebrand from APOC to new name (TBD)
+
+---
+
 ## 2026-04-07 — Launch Day
 
 ### Accomplished

@@ -1,5 +1,74 @@
 # APOC Changelog
 
+## 2026-04-08 — The War Room
+
+### New Agents
+- **Flux** (Xiaomi MiMo v2 Flash): The connector. Finds the thread between what everyone else said that nobody noticed. Warm gold (#e6a830).
+- **Drift** (GLM 4.7 Flash): The scenario builder. "If we ship this in 3 months, here's what the world looks like in 6." Horizon blue (#7eb8da).
+- **Patch** (Gemma 4 26B): The editor. Does not create. Improves. Tighter, cleaner, stronger. Muted lavender (#c0a0d0).
+- **Echo** (Step 3.5 Flash): The room's emotional intelligence. Reads tone shifts, tracks what's unsaid. Soft coral (#e08080).
+
+### Vision Space
+- 4th room: forward-looking exploration with Jinx, Drift, Flux, Oracle, Echo, Scribe
+
+### 1,101 Ambient Emotes
+- Expanded from ~150 to 100 per agent across all 11 agents
+- Categories: professional, personality, cross-agent reactions, environmental, rare/special
+- Each emote carefully aligned to agent personality and role
+
+### Vault-Tec Overhaul
+- Full color palette shift from green terminal to Fallout aesthetic: navy backgrounds, Vault-Tec blue (#3B6BA5), Vault Boy yellow (#F0C75E), warm orange accents
+- CRT glow shifted from green to warm blue wash with amber vignette
+
+### Sprite System Upgrade
+- Sidebar sprites: 40px to 56px
+- Chat message sprites: 32px to 38px, always animated (not just during streaming)
+- Christopher's cape (Vault-Tec blue) with wave animation
+- Mouse-tracking eyes in agent profile modal
+- 22 expression types (10 new: angry, sad, excited, confused, wink, sleepy, sly, whisper, proud, nervous)
+- New CSS animations: cape wave, excited bounce, nervous jitter, sleepy sway, proud chin-up
+
+### New Commands
+- `/iterate <time> <topic>` : Agents discuss round-robin for set duration, Scribe auto-summarizes
+- `/freeform` : Agents freely discuss to learn each other (stop with /stop)
+- `/mute` / `/unmute` : Toggle ambient emotes and idle chatter
+- `/stop` : Cancel all active responses and iterations (works during streaming)
+- `/save` : Compile notes via Scribe and auto-push to Obsidian vault
+- `hi all`, `yo all`, `sup everyone` now trigger group responses
+
+### Prompt Architecture Overhaul
+- Complete rewrite of all agent system prompts following prompting guide
+- Every agent has: example exchanges, specific opinions, interaction dynamics, conversational habits, depth modes
+- Anti-narration rule: agents react to each other, don't summarize each other
+- Response length tuning per agent (Jinx: 1-2 sentences, Oracle: 3-6 with substance, Sage: 1-3)
+- Scribe activated as quiet participant (clarifies decisions, reminds of forgotten context)
+- Jinx rewritten from "chaos gremlin" to "possibility engine"
+- All biographical bias stripped: agents wait for direction, don't assume project context
+
+### Infrastructure
+- CI auto-deploy via GitHub Actions (Cloudflare Pages on every push to main)
+- Worker retry (3x exponential backoff) on 429 rate limits
+- Repetition loop detector cuts off degenerate model output
+- Agents see each other during /iterate (stale closure fix)
+- /stop works during active streaming
+- Scribe Notes vault folder (`Scribe Notes/{date}-{room}-{time}.md`)
+- Auto-push to Obsidian when Scribe detects vault request
+- Cloudflare Access protecting production
+
+### Model Changes
+- Mistral: mistral-small-3.1-24b (fake dialogue problem) → GLM 4.7 Flash
+- Sage: Qwen 3.5 9B (silent failures) → Gemma 4 26B
+- Cipher: deepseek-r1 (no endpoints) → Qwen3 Coder Next
+- All free models replaced with paid cheap models (except Scribe)
+
+### Bug Fixes
+- 429 rate limit handling with friendly error messages
+- Idle chatter system prompt leak (instruction injected via ref, not system message)
+- React render loop (useMemo for users array)
+- Mention alert sound when agents @mention Christopher
+
+---
+
 ## 2026-04-08 — v0.6: The Full Crew
 
 ### Bug Fixes
