@@ -42,7 +42,7 @@ export default function MessageBubble({ message, searchQuery, onClickAgent, expr
       {showAnimatedAvatar ? (
         <AnimatedAvatar
           agentId={message.senderId}
-          size={32}
+          size={38}
           expression={expression}
           className="message-avatar"
         />

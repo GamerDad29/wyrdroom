@@ -357,8 +357,8 @@ html, body, #root {
 }
 
 .message-avatar {
-  width: 32px;
-  height: 32px;
+  width: 38px;
+  height: 38px;
   border-radius: 2px;
   border: 1px solid var(--border);
   flex-shrink: 0;
