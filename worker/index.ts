@@ -1,25 +1,180 @@
+import { agentManifest } from '../src/agents/manifest';
+
 export interface Env {
   OPENROUTER_API_KEY: string;
-  PROXY_SECRET: string;
+  // PROXY_SECRET is no longer consulted (SEC-01). Left in the interface so
+  // existing wrangler bindings don't break, but the worker never reads it.
+  PROXY_SECRET?: string;
   ENVIRONMENT: string;
 }
 
-const ALLOWED_ORIGINS = [
+// ---- Origin validation (SEC-02) ----------------------------------------
+//
+// The previous implementation matched origins with `startsWith` and
+// `endsWith` against the raw header string, which allows suffix attacks
+// like `https://apoc.pages.dev.evil.example`. This version parses the
+// header into a URL and compares the structured `hostname` component
+// (which the parser normalizes) against an exact allow-list plus a
+// whitelisted set of parent domains that accept any subdomain.
+
+const EXACT_ALLOWED_ORIGINS = new Set<string>([
+  // Local dev
   'http://localhost:5173',
   'http://localhost:5174',
   'http://localhost:4173',
+  'http://127.0.0.1:5173',
+  'http://127.0.0.1:5174',
+  'http://127.0.0.1:4173',
+  // Current production (APOC brand)
   'https://apoc.pages.dev',
+  // Future production (Wyrdroom rebrand — Phase 2/3 of Shipment 2)
+  'https://wyrdroom.com',
+  'https://www.wyrdroom.com',
+]);
+
+// Parent hostnames whose subdomains are allowed. Subdomain matching uses
+// the structured URL hostname (not the raw origin string), which is
+// immune to suffix injection.
+const ALLOWED_PARENT_HOSTNAMES = [
+  'apoc.pages.dev',
+  'wyrdroom.pages.dev',
+  'wyrdroom.com',
 ];
 
+function isOriginAllowed(rawOrigin: string): boolean {
+  if (!rawOrigin) return false;
+
+  let parsed: URL;
+  try {
+    parsed = new URL(rawOrigin);
+  } catch {
+    return false;
+  }
+
+  // Only http/https scheme. Reject file://, data://, null, etc.
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+    return false;
+  }
+
+  // Reject anything with a path, query, or fragment — a valid Origin
+  // header never has these, and if one is present the header is lying.
+  if (parsed.pathname !== '/' || parsed.search !== '' || parsed.hash !== '') {
+    return false;
+  }
+
+  // Rebuild canonical origin from the parsed URL so we compare apples
+  // to apples ("https://apoc.pages.dev" not "https://apoc.pages.dev/").
+  const canonical = `${parsed.protocol}//${parsed.host}`;
+  if (EXACT_ALLOWED_ORIGINS.has(canonical)) return true;
+
+  // Subdomain match via structured hostname. `hostname.endsWith('.' + parent)`
+  // is safe here because `parsed.hostname` is the normalized host component,
+  // not a substring of the raw header, so there is no suffix attack vector.
+  const host = parsed.hostname;
+  for (const parent of ALLOWED_PARENT_HOSTNAMES) {
+    if (host === parent || host.endsWith(`.${parent}`)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 function corsHeaders(origin: string): Record<string, string> {
-  const allowed = ALLOWED_ORIGINS.some((o) => origin.startsWith(o)) || origin.endsWith('.apoc.pages.dev');
+  const allowed = isOriginAllowed(origin);
   return {
-    'Access-Control-Allow-Origin': allowed ? origin : ALLOWED_ORIGINS[0],
+    'Access-Control-Allow-Origin': allowed ? origin : 'null',
+    'Vary': 'Origin',
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, X-Proxy-Secret',
+    'Access-Control-Allow-Headers': 'Content-Type',
     'Access-Control-Max-Age': '86400',
   };
 }
+
+// ---- Rate limiting (OPS-01) --------------------------------------------
+//
+// Best-effort in-memory per-isolate per-IP rate limiting. Not a substitute
+// for a real KV/DO-backed limiter — isolate lifetimes are short and
+// traffic can land on different isolates — but it stops accidental
+// runaway loops and caps cost exposure for a single abusive client.
+//
+// Window: 60s. Limits are per-endpoint:
+//   /api/chat     → 30 req/min per IP
+//   /api/health   → 120 req/min per IP
+//   /api/models   → 60 req/min per IP
+
+interface RateBucket {
+  count: number;
+  resetAt: number;
+}
+
+const RATE_WINDOW_MS = 60_000;
+const RATE_LIMITS: Record<string, number> = {
+  '/api/chat': 30,
+  '/api/health': 120,
+  '/api/models': 60,
+};
+const rateState = new Map<string, RateBucket>();
+
+function getClientIp(request: Request): string {
+  // Cloudflare sets CF-Connecting-IP. Fall back to X-Forwarded-For, then
+  // to a fixed string so tests without headers still get a stable key.
+  return (
+    request.headers.get('CF-Connecting-IP') ||
+    request.headers.get('X-Forwarded-For')?.split(',')[0].trim() ||
+    'unknown'
+  );
+}
+
+/**
+ * @returns `null` if the request is within limits, or a Response with
+ *   429 if the client has exceeded its budget for this endpoint.
+ */
+function checkRateLimit(
+  request: Request,
+  endpoint: string,
+  cors: Record<string, string>,
+): Response | null {
+  const limit = RATE_LIMITS[endpoint];
+  if (!limit) return null;
+
+  const ip = getClientIp(request);
+  const key = `${ip}:${endpoint}`;
+  const now = Date.now();
+
+  let bucket = rateState.get(key);
+  if (!bucket || bucket.resetAt <= now) {
+    bucket = { count: 0, resetAt: now + RATE_WINDOW_MS };
+    rateState.set(key, bucket);
+  }
+
+  bucket.count += 1;
+  if (bucket.count > limit) {
+    const retryAfterSec = Math.max(1, Math.ceil((bucket.resetAt - now) / 1000));
+    return new Response(
+      JSON.stringify({
+        error: 'Rate limit exceeded. Slow down and try again shortly.',
+      }),
+      {
+        status: 429,
+        headers: {
+          ...cors,
+          'Content-Type': 'application/json',
+          'Retry-After': String(retryAfterSec),
+        },
+      },
+    );
+  }
+
+  return null;
+}
+
+// Exposed for tests so a fresh run doesn't inherit state.
+export function __resetRateLimiterForTests(): void {
+  rateState.clear();
+}
+
+// ---- Request handler ---------------------------------------------------
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
@@ -31,7 +186,22 @@ export default {
       return new Response(null, { status: 204, headers: cors });
     }
 
+    // Reject non-CORS cross-origin requests outright. Browsers that sent
+    // an Origin header we don't recognize get a 403; server-to-server
+    // clients (no Origin header at all) are left alone so curl and
+    // monitoring still work.
+    if (origin && !isOriginAllowed(origin)) {
+      return new Response(JSON.stringify({ error: 'Forbidden origin' }), {
+        status: 403,
+        headers: { ...cors, 'Content-Type': 'application/json' },
+      });
+    }
+
     const url = new URL(request.url);
+
+    // Per-endpoint rate limit check (applies to every non-preflight request)
+    const rateLimited = checkRateLimit(request, url.pathname, cors);
+    if (rateLimited) return rateLimited;
 
     // Health check
     if (url.pathname === '/api/health' && request.method === 'GET') {
@@ -40,40 +210,29 @@ export default {
       });
     }
 
-    // Models list
+    // Models list — derived from the shared agent manifest (BUG-05).
+    // No more hardcoded duplicate that silently misses Drift and Echo.
     if (url.pathname === '/api/models' && request.method === 'GET') {
-      return new Response(
-        JSON.stringify({
-          models: [
-            { id: 'google/gemma-4-31b-it', name: 'Gemma 4 31B', status: 'active' },
-            { id: 'z-ai/glm-4.7-flash', name: 'GLM 4.7 Flash (Mistral)', status: 'active' },
-            { id: 'nvidia/nemotron-3-nano-30b-a3b:free', name: 'Nemotron 3 Nano (Scribe)', status: 'active' },
-            { id: 'qwen/qwen3-coder-next', name: 'Qwen3 Coder Next (Cipher)', status: 'active' },
-            { id: 'google/gemma-4-26b-a4b-it', name: 'Gemma 4 26B (Oracle)', status: 'active' },
-            { id: 'stepfun/step-3.5-flash', name: 'Step 3.5 Flash (Jinx)', status: 'active' },
-            { id: 'google/gemma-4-26b-a4b-it', name: 'Gemma 4 26B (Sage)', status: 'active' },
-            { id: 'xiaomi/mimo-v2-flash', name: 'MiMo v2 Flash (Flux)', status: 'active' },
-            { id: 'google/gemma-4-26b-a4b-it', name: 'Gemma 4 26B (Patch)', status: 'active' },
-          ],
-        }),
-        { headers: { ...cors, 'Content-Type': 'application/json' } },
-      );
+      const models = agentManifest.map((a) => ({
+        id: a.modelId,
+        name: a.displayName,
+        agentId: a.id,
+        agentName: a.name,
+        status: 'active' as const,
+      }));
+      return new Response(JSON.stringify({ models }), {
+        headers: { ...cors, 'Content-Type': 'application/json' },
+      });
     }
 
-    // Chat endpoint
+    // Chat endpoint — SEC-01: no more shared-secret check. Access is
+    // gated by origin validation + rate limiting. The old X-Proxy-Secret
+    // header was bundled into the browser build and therefore never a
+    // real secret.
     if (url.pathname === '/api/chat' && request.method === 'POST') {
-      // Validate proxy secret
-      const secret = request.headers.get('X-Proxy-Secret');
-      if (secret !== env.PROXY_SECRET) {
-        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-          status: 401,
-          headers: { ...cors, 'Content-Type': 'application/json' },
-        });
-      }
-
       let body: Record<string, unknown>;
       try {
-        body = await request.json() as Record<string, unknown>;
+        body = (await request.json()) as Record<string, unknown>;
       } catch {
         return new Response(JSON.stringify({ error: 'Invalid JSON' }), {
           status: 400,
@@ -111,7 +270,10 @@ export default {
         // Friendly message for rate limits
         if (status === 429) {
           return new Response(
-            JSON.stringify({ error: 'Rate limited by model provider. Free models have usage caps. Try again in a minute, or switch to a paid model.' }),
+            JSON.stringify({
+              error:
+                'Rate limited by model provider. Free models have usage caps. Try again in a minute, or switch to a paid model.',
+            }),
             { status: 429, headers: { ...cors, 'Content-Type': 'application/json' } },
           );
         }

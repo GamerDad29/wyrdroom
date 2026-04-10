@@ -1,7 +1,13 @@
 import { ChatCompletionRequest } from '../types';
 
 const WORKER_URL = import.meta.env.VITE_WORKER_URL || 'http://localhost:8787';
-const PROXY_SECRET = import.meta.env.VITE_PROXY_SECRET || '';
+
+// SEC-01: The previous build shipped `VITE_PROXY_SECRET` to the browser
+// and attached it as `X-Proxy-Secret` on every chat request. That was
+// not a real secret — `VITE_*` env vars are bundled into the client
+// build and anyone with the app could extract and reuse it. The worker
+// no longer consults that header; access is now gated by strict
+// origin validation plus per-IP rate limiting on the worker side.
 
 export async function sendChatRequest(
   request: ChatCompletionRequest,
@@ -18,7 +24,6 @@ export async function sendChatRequest(
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-Proxy-Secret': PROXY_SECRET,
       },
       body: JSON.stringify(request),
       signal,

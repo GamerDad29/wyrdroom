@@ -10,9 +10,11 @@ const request: ChatCompletionRequest = {
 };
 
 describe('proxyService', () => {
-  it('streams SSE chunks and forwards the proxy secret header', async () => {
+  it('streams SSE chunks without sending any bundled secret header', async () => {
+    // SEC-01: the browser build used to ship VITE_PROXY_SECRET and send
+    // it as X-Proxy-Secret. The worker no longer reads that header and
+    // the frontend no longer sends it. Confirm both.
     vi.stubEnv('VITE_WORKER_URL', 'https://worker.example');
-    vi.stubEnv('VITE_PROXY_SECRET', 'top-secret');
 
     const encoder = new TextEncoder();
     const body = new ReadableStream({
@@ -45,16 +47,11 @@ describe('proxyService', () => {
       onError,
     );
 
-    expect(fetchSpy).toHaveBeenCalledWith(
-      'https://worker.example/api/chat',
-      expect.objectContaining({
-        method: 'POST',
-        headers: expect.objectContaining({
-          'Content-Type': 'application/json',
-          'X-Proxy-Secret': 'top-secret',
-        }),
-      }),
-    );
+    const call = fetchSpy.mock.calls[0];
+    expect(call[0]).toBe('https://worker.example/api/chat');
+    const sentHeaders = (call[1] as RequestInit).headers as Record<string, string>;
+    expect(sentHeaders['Content-Type']).toBe('application/json');
+    expect(sentHeaders['X-Proxy-Secret']).toBeUndefined();
     expect(chunks).toEqual(['Hello', ' world']);
     expect(onDone).toHaveBeenCalledTimes(1);
     expect(onError).not.toHaveBeenCalled();
@@ -62,7 +59,6 @@ describe('proxyService', () => {
 
   it('does nothing if the signal is already aborted before the call', async () => {
     vi.stubEnv('VITE_WORKER_URL', 'https://worker.example');
-    vi.stubEnv('VITE_PROXY_SECRET', 'top-secret');
 
     const fetchSpy = vi.spyOn(globalThis, 'fetch');
     const { sendChatRequest } = await import('./proxyService');
@@ -84,7 +80,6 @@ describe('proxyService', () => {
 
   it('passes the abort signal through to fetch', async () => {
     vi.stubEnv('VITE_WORKER_URL', 'https://worker.example');
-    vi.stubEnv('VITE_PROXY_SECRET', 'top-secret');
 
     const encoder = new TextEncoder();
     const body = new ReadableStream({
@@ -110,7 +105,6 @@ describe('proxyService', () => {
 
   it('surfaces rate-limit responses as a friendly error', async () => {
     vi.stubEnv('VITE_WORKER_URL', 'https://worker.example');
-    vi.stubEnv('VITE_PROXY_SECRET', 'top-secret');
 
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(
       new Response('Too many requests', { status: 429 }),
