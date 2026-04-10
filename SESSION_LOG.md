@@ -44,14 +44,37 @@
 - Screenshot saved to `wyrdroom-rebrand-smoke-test.png` (local,
   gitignored via `.playwright-mcp/` pattern)
 
-### Observation: rune glyphs render via font fallback
-VT323 and Share Tech Mono are Latin-only retro pixel fonts, so the
-Elder Futhark characters fall back to the system font. At 11px
-monospace some runes read as ASCII-adjacent shapes (`ᚷ` → X,
-`ᛗ` → M, `ᚲ` → <, `ᛖ` → M). The DOM is correct; this is purely
-visual. Fix: add Noto Sans Runic to the Google Fonts import plus a
-`font-family` override on `.wyrd-rune, .system-message`. Filed as a
-Shipment 3 polish item, not a rebrand blocker.
+### POLISH-01: Noto Sans Runic font loaded (commit `57aad29`)
+Implemented immediately after the smoke test. Two-file fix on
+`wyrdroom-rebrand`:
+
+- `index.html` — added `Noto+Sans+Runic` to the Google Fonts import
+- `src/styles/chatroom.css` — added Noto Sans Runic to the front of
+  the font-family stack on `.wyrd-rune` and `.system-message`
+
+Google Fonts ships Noto Sans Runic with `unicode-range: U+16A0–16F8`,
+so the browser only uses it for codepoints in the Runic block and
+falls through to the retro pixel fonts for Latin text. Per-glyph
+swap, not a full font swap.
+
+Verified at runtime:
+- `document.fonts` reports Noto Sans Runic with `status: 'loaded'`
+- 48 px probe of `ᚷ` measures 23.16 px under fallback vs 28.14 px
+  under the new stack (~22% metric change — confirms a different
+  font is actually rendering the codepoint)
+- `getComputedStyle(.system-message).fontFamily` returns exactly
+  `"Noto Sans Runic", "Share Tech Mono", VT323, monospace`
+
+Observation on visual payoff: the titlebar Wunjo rune (at 14 px)
+shows a clearly different, more angular glyph. The 12 px entry-
+message runes still read somewhat ASCII-adjacent because Elder
+Futhark glyphs genuinely resemble angular Latin letters (ᚷ *is*
+an X shape, ᛗ *is* an M, ᚲ *is* a `<`). The real value of the
+fix is tofu protection — on systems without good Runic coverage
+in the default font, the old version would have rendered empty
+boxes. Now they always render.
+
+34/34 tests still passing, clean tsc, clean build.
 
 ### Next: Phase 3 (needs Christopher's hands)
 1. GitHub: rename repo `GamerDad29/apoc` → `GamerDad29/wyrdroom`

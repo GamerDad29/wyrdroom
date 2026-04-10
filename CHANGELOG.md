@@ -23,7 +23,12 @@ the new `wyrdroom-proxy` name, Cloudflare Pages custom domain
   Wyrdroom with historical entries preserved
 - `README.md` rewritten with Wyrdroom tagline and new security notes
 - 34/34 tests still passing, clean tsc + clean build
-- Commit `5c70060` on `wyrdroom-rebrand`
+- Commits on `wyrdroom-rebrand`:
+  - `5c70060` — full rename map executed
+  - `57aad29` — POLISH-01: Noto Sans Runic loaded for crisp
+    Elder Futhark rune rendering (Google Fonts `unicode-range`
+    U+16A0–16F8 so only Runic codepoints swap; Latin text stays
+    on the retro pixel fonts)
 
 ### On main
 This document and `main` still reflect the APOC brand. Once the
