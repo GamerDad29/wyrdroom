@@ -1,5 +1,45 @@
 # APOC Changelog
 
+## 2026-04-10 — Shipment 2 Phase 1: Worker Hardening
+
+Security-layer half of the Wyrdroom arc, landing under the APOC brand
+so the rebrand phase inherits a clean surface. Worker is now forward-
+compatible with `wyrdroom.com` origins — no CORS race during cutover.
+
+### Security
+- **Strict origin validation (SEC-02).** Parses `Origin` with
+  `new URL()`, constrains scheme to http/https, rejects headers with
+  injected paths/queries/fragments, compares canonical origin against
+  an exact allow-list, and uses the parser's normalized `hostname`
+  for subdomain matching. Suffix attacks like
+  `https://apoc.pages.dev.evil.example` are rejected. Allow-list now
+  covers both current production (`apoc.pages.dev` + Pages previews)
+  and future production (`wyrdroom.com`, `*.wyrdroom.com`,
+  `*.wyrdroom.pages.dev`).
+- **Removed bundled proxy secret (SEC-01).** `VITE_PROXY_SECRET` is
+  gone from the client; the worker no longer checks `X-Proxy-Secret`.
+  The header was a real secret in name only — `VITE_*` vars ship in
+  the browser bundle. Access is now gated by origin validation +
+  rate limiting.
+- **Per-IP rate limiting (OPS-01).** In-memory sliding window per
+  isolate: 30/min `/api/chat`, 120/min `/api/health`, 60/min
+  `/api/models`. 429 responses carry `Retry-After`. Known limitation:
+  per-isolate state, not KV/DO-backed; this is the "prevent
+  accidental runaway loops" tier.
+
+### Bug fixes
+- **`/api/models` derived from shared manifest (BUG-05).** Created
+  `src/agents/manifest.ts` as the single source of truth for public
+  agent metadata. The worker's models endpoint is now derived from
+  it — the old hardcoded list was silently missing Drift and Echo.
+  A consistency test pins manifest entries to individual agent files
+  so drift cannot return.
+
+### Test coverage
+- **19 → 34 tests passing.** Added 16 new tests covering origin
+  validation (7), SEC-01 no-secret behavior (2), manifest-derived
+  models (1), rate limiting (2), manifest consistency (4).
+
 ## 2026-04-10 — Shipment 1: Trust the Runtime
 
 Post-Codex-review hardening pass. No new features — eight correctness

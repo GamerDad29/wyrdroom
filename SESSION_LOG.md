@@ -1,5 +1,38 @@
 # APOC Session Log
 
+## 2026-04-10 — Shipment 2 Phase 1: Worker Hardening
+
+### Accomplished
+- Created `src/agents/manifest.ts` — shared source of truth for public
+  agent metadata. Consistency test pins individual agent files to it.
+- Rewrote `worker/index.ts`:
+  - Strict origin validation with structured URL parsing (SEC-02)
+  - Removed `X-Proxy-Secret` check (SEC-01)
+  - Added in-memory per-IP rate limiter (OPS-01)
+  - `/api/models` now derived from manifest (BUG-05)
+  - Allow-list includes both `apoc.pages.dev` and future
+    `wyrdroom.com` origins — worker is forward-compatible for the
+    rebrand cutover
+- Removed `VITE_PROXY_SECRET` usage from `proxyService.ts`
+- Test coverage: 19 → 34 passing. Added 16 new tests.
+- Commit `c82400d` on main (not yet pushed)
+
+### Known Issues / Carry-over
+- Rate limiter is per-isolate in-memory; traffic landing on different
+  isolates drifts. Adequate for v0 "stop accidental runaway" tier but
+  not real abuse protection. Real limiter on Shipment 4 backlog.
+- `HTTP-Referer` and `X-Title` in the OpenRouter call still say
+  "apoc.pages.dev" and "APOC Chat Room" — intentionally left for the
+  Phase 2 rebrand pass (will flip to wyrdroom.com when the rest of
+  the branding does).
+- Phase 1 commit not yet pushed to `origin/main`. Planning to push
+  after this session's rebrand phase (Phase 2) is decided.
+
+### Next in this session: Shipment 2 Phase 2 (rebrand code)
+Branch strategy TBD — pause after Phase 1 to confirm with Christopher.
+Options: commit to main (assumes Phase 3 infra cutover happens soon)
+or commit to a `wyrdroom-rebrand` branch (safer, reviewable).
+
 ## 2026-04-10 — Shipment 1: Trust the Runtime
 
 ### Accomplished

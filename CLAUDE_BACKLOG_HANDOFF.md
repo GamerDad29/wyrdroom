@@ -60,11 +60,33 @@ Closed:
 - **BUG-03** Sidebar resize — ref-based width at mouse-up
 - **TEST-01** Vitest harness + service coverage extended
 
-### ⏳ Shipment 2 — Wyrdroom + Security Finish (next)
+### 🟡 Shipment 2 Phase 1 — Worker Hardening (shipped 2026-04-10)
 
-Open: SEC-01, SEC-02, OPS-01, BUG-05, REF-02, REBRAND-01..04. See the
-Wyrdroom Epic below and the "Shipments 1–4" plan at the bottom. One
-Worker redeploy, new name, correct CORS from day one.
+Commit `c82400d` on main, 34/34 tests passing. Not yet pushed.
+
+Closed:
+- **SEC-02** Strict origin validation — parsed URL, exact host allow-list,
+  structured subdomain matching, forward-compat for `wyrdroom.com`
+- **SEC-01** Removed `VITE_PROXY_SECRET` from browser bundle and worker
+- **OPS-01** In-memory per-IP rate limiting (v0 tier)
+- **BUG-05** `/api/models` derived from shared manifest
+- **REF-02** Shared agent manifest as single source of truth
+
+Deferred to Shipment 4: KV/DO-backed rate limiter (this is per-isolate).
+
+### ⏳ Shipment 2 Phase 2 — Rebrand (code-only portion)
+
+Open: REBRAND-02, REBRAND-03, REBRAND-04. All pure code changes per
+the rename map in `wyrdroom-rebrand.md`. Branch strategy TBD.
+
+### ⏳ Shipment 2 Phase 3 — Infra cutover (needs Christopher)
+
+Open: REBRAND-01. Requires dashboard access:
+- GitHub repo rename (`apoc` → `wyrdroom`)
+- Delete old `apoc-proxy` Worker in Cloudflare
+- `wrangler deploy` under new name `wyrdroom-proxy`
+- Cloudflare Pages custom domain setup (`wyrdroom.com`)
+- `git remote set-url` locally
 
 ### ⏳ Shipment 3 — Usability
 Open: FEAT-01, FEAT-02, FEAT-04, FEAT-05, FEAT-11, VAULT-01
