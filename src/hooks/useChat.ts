@@ -43,6 +43,9 @@ function saveMessages(roomId: string, messages: Message[]): void {
   localStorage.setItem(storageKey(roomId), JSON.stringify(toSave));
 }
 
+// Pure: builds the entry-message list for a room. Callers are responsible
+// for any side effects like sound playback (see playEntrySounds below) so
+// this can safely run inside a React state initializer under StrictMode.
 function createEntryMessages(roomId: string): Message[] {
   const room = rooms.find((r) => r.id === roomId);
   if (!room) return [];
@@ -50,7 +53,6 @@ function createEntryMessages(roomId: string): Message[] {
     .map((agentId) => {
       const agent = agents.find((a) => a.id === agentId);
       if (!agent) return null;
-      playAgentEnter(agentId);
       return {
         id: generateId(),
         senderId: 'system',
@@ -66,23 +68,59 @@ function createEntryMessages(roomId: string): Message[] {
     .filter(Boolean) as Message[];
 }
 
+// Plays the "agent entered" tone for each agent in a room. Side-effectful,
+// must only be called from an effect, never from a state initializer.
+function playEntrySounds(roomId: string): void {
+  const room = rooms.find((r) => r.id === roomId);
+  if (!room) return;
+  for (const agentId of room.agents) {
+    playAgentEnter(agentId);
+  }
+}
+
 export function useChat() {
   const [activeRoomId, setActiveRoomId] = useState('main');
+  // Track which rooms were freshly seeded (no saved history) so we can play
+  // their entry sounds from an effect rather than the state initializer.
+  const freshlySeededRoomsRef = useRef<string[]>([]);
   const [messagesByRoom, setMessagesByRoom] = useState<Record<string, Message[]>>(() => {
     const initial: Record<string, Message[]> = {};
+    const seeded: string[] = [];
     for (const room of rooms) {
       const saved = loadMessages(room.id);
-      initial[room.id] = saved.length > 0 ? saved : createEntryMessages(room.id);
+      if (saved.length > 0) {
+        initial[room.id] = saved;
+      } else {
+        initial[room.id] = createEntryMessages(room.id);
+        seeded.push(room.id);
+      }
     }
+    freshlySeededRoomsRef.current = seeded;
     return initial;
   });
-  const [typingAgent, setTypingAgent] = useState<string | null>(null);
+  const [typingAgents, setTypingAgents] = useState<string[]>([]);
   const [isConnected, setIsConnected] = useState(true);
   const [lastNotes, setLastNotes] = useState<string>('');
-  const streamingRef = useRef(false);
+  // Active in-flight requests keyed by message id. Each entry owns an
+  // AbortController so `/stop` can cancel every active stream at once, and
+  // the size of this map is the single source of truth for "is anything
+  // streaming right now?" — replacing the old global streamingRef boolean.
+  const activeRequestsRef = useRef<Map<string, AbortController>>(new Map());
+  const isStreaming = () => activeRequestsRef.current.size > 0;
   const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastUserActivityRef = useRef(Date.now());
   const messagesByRoomRef = useRef(messagesByRoom);
+
+  // Small helpers for per-agent typing indicator state.
+  const addTypingAgent = useCallback((name: string) => {
+    setTypingAgents((prev) => (prev.includes(name) ? prev : [...prev, name]));
+  }, []);
+  const removeTypingAgent = useCallback((name: string) => {
+    setTypingAgents((prev) => prev.filter((n) => n !== name));
+  }, []);
+
+  // Back-compat single-value typing agent for components that expect a string.
+  const typingAgent = typingAgents[0] || null;
 
   messagesByRoomRef.current = messagesByRoom;
   const messages = messagesByRoom[activeRoomId] || [];
@@ -91,12 +129,39 @@ export function useChat() {
     saveMessages(activeRoomId, messages);
   }, [activeRoomId, messages]);
 
+  // Connectivity: run an initial health check and then re-check every 60s.
+  // A failed check surfaces as disconnected (the previous fallback of
+  // `true` lied to the UI when the worker was unreachable).
   useEffect(() => {
-    checkHealth().then(setIsConnected).catch(() => setIsConnected(true));
+    let cancelled = false;
+
+    const runCheck = () => {
+      checkHealth()
+        .then((ok) => {
+          if (!cancelled) setIsConnected(ok);
+        })
+        .catch(() => {
+          if (!cancelled) setIsConnected(false);
+        });
+    };
+
+    runCheck();
+    const interval = setInterval(runCheck, 60000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
   }, []);
 
   useEffect(() => {
     playEnterRoom();
+    // Play per-agent entry tones for any rooms that were freshly seeded
+    // during this mount. Safe here (effect, not initializer) so StrictMode
+    // double-invocation of the initializer can't double-fire the audio.
+    for (const roomId of freshlySeededRoomsRef.current) {
+      playEntrySounds(roomId);
+    }
+    freshlySeededRoomsRef.current = [];
   }, []);
 
   const agentMessageCount = messages.filter((m) => m.type === 'agent' || m.type === 'user').length;
@@ -111,9 +176,19 @@ export function useChat() {
   const switchRoom = useCallback((roomId: string) => {
     if (roomId === activeRoomId) return;
     setActiveRoomId(roomId);
-    setTypingAgent(null);
+    setTypingAgents([]);
     playRoomSwitch(roomId);
   }, [activeRoomId]);
+
+  // Cancel every in-flight agent request. Used by /stop and by room switches
+  // where we want to abandon background work cleanly.
+  const cancelAllRequests = useCallback(() => {
+    for (const controller of activeRequestsRef.current.values()) {
+      try { controller.abort(); } catch { /* ignore */ }
+    }
+    activeRequestsRef.current.clear();
+    setTypingAgents([]);
+  }, []);
 
   const buildUsers = useCallback((): UserInfo[] => {
     const room = rooms.find((r) => r.id === activeRoomId);
@@ -124,13 +199,14 @@ export function useChat() {
         const agent = agents.find((a) => a.id === agentId);
         if (!agent) return null;
 
+        const isTyping = typingAgents.includes(agent.name);
         if (agent.id === 'scribe') {
           return {
             id: agent.id,
             name: agent.name,
             nameColor: agent.nameColor,
             avatarUrl: agent.avatarUrl,
-            status: typingAgent === agent.name ? ('typing' as const) : ('online' as const),
+            status: isTyping ? ('typing' as const) : ('online' as const),
             mood: '\u270D recording',
           };
         }
@@ -141,7 +217,7 @@ export function useChat() {
           name: agent.name,
           nameColor: agent.nameColor,
           avatarUrl: agent.avatarUrl,
-          status: typingAgent === agent.name ? ('typing' as const) : ('online' as const),
+          status: isTyping ? ('typing' as const) : ('online' as const),
           mood: `${getMoodEmoji(mood.mood)} ${mood.label}`,
         };
       })
@@ -156,33 +232,56 @@ export function useChat() {
     };
 
     return [...agentUsers, christopherUser];
-  }, [typingAgent, activeRoomId, agentMessageCount]);
+  }, [typingAgents, activeRoomId, agentMessageCount]);
 
-  // Send to a single agent and get streaming response
+  // Send to a single agent and get streaming response.
+  //
+  // Each call registers an AbortController in activeRequestsRef so that
+  // /stop can cancel every in-flight request at once. Typing state is
+  // per-agent so multiple agents can stream concurrently (see "hey all",
+  // iterate, and freeform flows) without stepping on each other.
+  //
+  // The `autoSaveToVault` option replaces the old "sniff the last user
+  // message for the phrase 'push to obsidian'" hack — callers now pass
+  // explicit structured intent.
   const sendToAgent = useCallback((
     agent: ReturnType<typeof getAgent>,
     allMessages: Message[],
     roomId: string,
-    isIdleChat?: boolean,
-    idleInstruction?: string,
+    options?: {
+      isIdleChat?: boolean;
+      idleInstruction?: string;
+      autoSaveToVault?: boolean;
+    },
   ) => {
     if (!agent) return;
 
-    streamingRef.current = true;
-    setTypingAgent(agent.name);
+    const isIdleChat = options?.isIdleChat;
+    const idleInstruction = options?.idleInstruction;
+    const autoSaveToVault = options?.autoSaveToVault;
 
     const agentMsgId = generateId();
+    const controller = new AbortController();
+    activeRequestsRef.current.set(agentMsgId, controller);
+    addTypingAgent(agent.name);
+
     let accumulated = '';
     let streamStarted = false;
+
+    const finish = () => {
+      activeRequestsRef.current.delete(agentMsgId);
+      removeTypingAgent(agent.name);
+    };
 
     sendMessageToAgent(
       agent,
       allMessages,
       (chunk) => {
+        if (controller.signal.aborted) return;
         accumulated += chunk;
         if (!streamStarted) {
           streamStarted = true;
-          setTypingAgent(null);
+          removeTypingAgent(agent.name);
           if (isIdleChat) {
             playIdleChatter();
           } else {
@@ -214,16 +313,13 @@ export function useChat() {
         });
       },
       () => {
-        streamingRef.current = false;
-        setTypingAgent(null);
+        if (controller.signal.aborted) { finish(); return; }
+        finish();
         if (agent.id === 'scribe') {
           setLastNotes(accumulated);
-          // Auto-push to Obsidian if the triggering message mentioned it
-          const recentUserMsgs = (messagesByRoomRef.current[roomId] || []).filter(m => m.type === 'user').slice(-3);
-          const userAskedForVault = recentUserMsgs.some(m =>
-            /push to obsidian|save to (obsidian|vault)|vault save|push to vault/i.test(m.content)
-          );
-          if (userAskedForVault && accumulated.length > 50) {
+          // Structured auto-save: only fires when the caller explicitly
+          // asked for it (e.g. /save). No more content sniffing.
+          if (autoSaveToVault && accumulated.length > 50) {
             const room = rooms.find((r) => r.id === roomId);
             const date = new Date().toISOString().slice(0, 10);
             const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }).replace(':', '');
@@ -256,6 +352,18 @@ export function useChat() {
                     roomId,
                   }]);
                 });
+              } else {
+                setRoomMessages(roomId, (prev) => [...prev, {
+                  id: generateId(),
+                  senderId: 'system',
+                  senderName: 'System',
+                  senderColor: '#5a6878',
+                  avatarUrl: '',
+                  content: 'Vault not available — notes held in memory. Use /vault save once Obsidian is reachable.',
+                  timestamp: Date.now(),
+                  type: 'system' as const,
+                  roomId,
+                }]);
               }
             });
           }
@@ -272,8 +380,8 @@ export function useChat() {
         );
       },
       (error) => {
-        streamingRef.current = false;
-        setTypingAgent(null);
+        if (controller.signal.aborted) { finish(); return; }
+        finish();
         playError();
         setRoomMessages(roomId, (prev) => [
           ...prev,
@@ -291,10 +399,12 @@ export function useChat() {
         ]);
       },
       idleInstruction,
+      controller.signal,
     );
-  }, [setRoomMessages]);
+  }, [setRoomMessages, addTypingAgent, removeTypingAgent]);
 
-  // Promise-based sendToAgent for chaining
+  // Promise-based sendToAgent for chaining (hey all / iterate / freeform).
+  // Same AbortController + per-agent typing treatment as sendToAgent.
   const sendToAgentPromise = useCallback((
     agent: NonNullable<ReturnType<typeof getAgent>>,
     allMessages: Message[],
@@ -305,21 +415,28 @@ export function useChat() {
     return new Promise((resolve) => {
       if (!agent) { resolve(); return; }
 
-      streamingRef.current = true;
-      setTypingAgent(agent.name);
-
       const agentMsgId = generateId();
+      const controller = new AbortController();
+      activeRequestsRef.current.set(agentMsgId, controller);
+      addTypingAgent(agent.name);
+
       let accumulated = '';
       let streamStarted = false;
+
+      const finish = () => {
+        activeRequestsRef.current.delete(agentMsgId);
+        removeTypingAgent(agent.name);
+      };
 
       sendMessageToAgent(
         agent,
         allMessages,
         (chunk) => {
+          if (controller.signal.aborted) return;
           accumulated += chunk;
           if (!streamStarted) {
             streamStarted = true;
-            setTypingAgent(null);
+            removeTypingAgent(agent.name);
             if (isIdleChat) {
               playIdleChatter();
             } else {
@@ -351,8 +468,8 @@ export function useChat() {
           });
         },
         () => {
-          streamingRef.current = false;
-          setTypingAgent(null);
+          if (controller.signal.aborted) { finish(); resolve(); return; }
+          finish();
           if (agent.id === 'scribe') setLastNotes(accumulated);
           setRoomMessages(roomId, (prev) =>
             prev.map((m) =>
@@ -362,8 +479,8 @@ export function useChat() {
           resolve();
         },
         (error) => {
-          streamingRef.current = false;
-          setTypingAgent(null);
+          if (controller.signal.aborted) { finish(); resolve(); return; }
+          finish();
           playError();
           setRoomMessages(roomId, (prev) => [
             ...prev,
@@ -382,9 +499,10 @@ export function useChat() {
           resolve();
         },
         idleInstruction,
+        controller.signal,
       );
     });
-  }, [setRoomMessages]);
+  }, [setRoomMessages, addTypingAgent, removeTypingAgent]);
 
   // "Hey all" -- send to multiple agents sequentially
   const sendToAll = useCallback((
@@ -429,7 +547,7 @@ export function useChat() {
       const delay = 240000 + Math.random() * 180000;
 
       idleTimerRef.current = setTimeout(() => {
-        if (streamingRef.current) return;
+        if (isStreaming()) return;
         if (mutedRef.current) { scheduleIdleChat(); return; }
         if (Date.now() - lastUserActivityRef.current < 180000) return; // 3 min minimum idle
         if (idleCountRef.current >= MAX_IDLE_PER_SESSION) return; // cap reached
@@ -481,7 +599,7 @@ export function useChat() {
       const delay = 30000 + Math.random() * 60000;
 
       emoteTimerRef.current = setTimeout(() => {
-        if (streamingRef.current) return;
+        if (isStreaming()) return;
         if (mutedRef.current) { scheduleEmote(); return; }
 
         const room = rooms.find((r) => r.id === activeRoomId);
@@ -723,7 +841,7 @@ export function useChat() {
       // Allow /stop and /mute even during streaming
       const isStopCmd = text.trim().toLowerCase() === '/stop';
       const isMuteCmd = text.trim().toLowerCase() === '/mute';
-      if (streamingRef.current && !isStopCmd && !isMuteCmd) return;
+      if (isStreaming() && !isStopCmd && !isMuteCmd) return;
 
       // Reset idle timer on user activity
       lastUserActivityRef.current = Date.now();
@@ -859,13 +977,14 @@ export function useChat() {
         }
 
         if (cmdResult.type === 'stop') {
-          // Cancel active iteration
+          // Cancel active iteration / freeform loops
           if (iterationRef.current.active) {
             iterationRef.current.active = false;
             if (iterationRef.current.timer) clearTimeout(iterationRef.current.timer);
           }
-          streamingRef.current = false;
-          setTypingAgent(null);
+          // Actually abort every in-flight fetch so the worker stops
+          // burning tokens. Also clears typing indicators.
+          cancelAllRequests();
           addSystemMessage(cmdResult.content);
           return;
         }
@@ -884,7 +1003,10 @@ export function useChat() {
 
         if (cmdResult.type === 'save') {
           addSystemMessage(cmdResult.content);
-          // Trigger Scribe to compile, then auto-push to vault
+          // Trigger Scribe to compile notes, then auto-push to vault via
+          // explicit structured intent. No more injecting a fake user
+          // message ("push to obsidian") into the transcript to trick the
+          // Scribe onDone handler into running the auto-save branch.
           const scribeAgent = getAgent('scribe');
           if (!scribeAgent) return;
           const room = rooms.find((r) => r.id === activeRoomId);
@@ -895,27 +1017,14 @@ export function useChat() {
             senderName: USER_NAME,
             senderColor: USER_COLOR,
             avatarUrl: USER_AVATAR,
-            content: notesPrompt + '\n\nAfter compiling, these notes will be automatically saved to the Obsidian vault.',
+            content: notesPrompt,
             timestamp: Date.now(),
             type: 'user',
             roomId: activeRoomId,
           };
-          // Use a flag so the onDone callback knows to auto-push
-          sendToAgent(scribeAgent, [...messages, notesMsg], activeRoomId);
-          // The auto-push is handled by the Scribe detection in sendToAgent's onDone
-          // since the user message contains "save to vault"
-          // We inject a fake user message to trigger the auto-detection
-          setRoomMessages(activeRoomId, (prev) => [...prev, {
-            id: generateId(),
-            senderId: USER_ID,
-            senderName: USER_NAME,
-            senderColor: USER_COLOR,
-            avatarUrl: USER_AVATAR,
-            content: 'push to obsidian',
-            timestamp: Date.now(),
-            type: 'user',
-            roomId: activeRoomId,
-          }]);
+          sendToAgent(scribeAgent, [...messages, notesMsg], activeRoomId, {
+            autoSaveToVault: true,
+          });
           return;
         }
 

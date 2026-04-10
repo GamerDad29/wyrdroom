@@ -39,6 +39,8 @@ export default function ChatRoom() {
     const stored = localStorage.getItem('apoc_sidebar_width');
     return stored ? parseInt(stored, 10) : 220;
   });
+  const sidebarWidthRef = useRef(sidebarWidth);
+  sidebarWidthRef.current = sidebarWidth;
   const isDragging = useRef(false);
 
   const activeRoom = rooms.find((r) => r.id === activeRoomId);
@@ -109,7 +111,9 @@ export default function ChatRoom() {
     }
   }
 
-  // Sidebar drag resize
+  // Sidebar drag resize. Uses a ref to capture the *current* width on mouse-up
+  // rather than the value captured when the drag started (which would be stale
+  // by the time the user releases).
   const handleDragStart = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     isDragging.current = true;
@@ -117,7 +121,7 @@ export default function ChatRoom() {
     document.body.style.userSelect = 'none';
 
     const startX = e.clientX;
-    const startWidth = sidebarWidth;
+    const startWidth = sidebarWidthRef.current;
 
     function onMove(ev: MouseEvent) {
       if (!isDragging.current) return;
@@ -132,12 +136,14 @@ export default function ChatRoom() {
       document.body.style.userSelect = '';
       document.removeEventListener('mousemove', onMove);
       document.removeEventListener('mouseup', onUp);
-      localStorage.setItem('apoc_sidebar_width', String(sidebarWidth));
+      // Persist the width the user actually dragged to, not the stale value
+      // captured when the drag started.
+      localStorage.setItem('apoc_sidebar_width', String(sidebarWidthRef.current));
     }
 
     document.addEventListener('mousemove', onMove);
     document.addEventListener('mouseup', onUp);
-  }, [sidebarWidth]);
+  }, []);
 
   return (
     <div className="apoc-window">

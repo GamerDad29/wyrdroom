@@ -72,6 +72,7 @@ export async function sendMessageToAgent(
   onDone: () => void,
   onError: (error: string) => void,
   idleInstruction?: string,
+  signal?: AbortSignal,
 ): Promise<void> {
   if (!canSpend(agent.id, agent.maxTokensPerResponse)) {
     onError(`Token budget exceeded for ${agent.name}. Try again later.`);
@@ -97,7 +98,7 @@ export async function sendMessageToAgent(
   await sendChatRequest(
     request,
     (text) => {
-      if (aborted) return;
+      if (aborted || signal?.aborted) return;
       totalChars += text.length;
       fullAccumulated += text;
 
@@ -122,7 +123,7 @@ export async function sendMessageToAgent(
       onChunk(text);
     },
     () => {
-      if (aborted) return;
+      if (aborted || signal?.aborted) return;
       // Flush any remaining early buffer
       if (isFirstChunk && earlyBuffer.length > 0) {
         const cleaned = sanitizeIdleResponse(earlyBuffer);
@@ -133,6 +134,7 @@ export async function sendMessageToAgent(
       onDone();
     },
     onError,
+    signal,
   );
 }
 

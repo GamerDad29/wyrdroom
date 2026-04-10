@@ -8,7 +8,11 @@ export async function sendChatRequest(
   onChunk: (text: string) => void,
   onDone: () => void,
   onError: (error: string) => void,
+  signal?: AbortSignal,
 ): Promise<void> {
+  // Short-circuit: if already aborted, do nothing and do not fire callbacks.
+  if (signal?.aborted) return;
+
   try {
     const response = await fetch(`${WORKER_URL}/api/chat`, {
       method: 'POST',
@@ -17,6 +21,7 @@ export async function sendChatRequest(
         'X-Proxy-Secret': PROXY_SECRET,
       },
       body: JSON.stringify(request),
+      signal,
     });
 
     if (!response.ok) {
@@ -38,38 +43,57 @@ export async function sendChatRequest(
     const decoder = new TextDecoder();
     let buffer = '';
 
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
+    // If the caller aborts mid-stream, cancel the reader so the underlying
+    // fetch tears down instead of burning tokens in the background.
+    const abortHandler = () => {
+      reader.cancel().catch(() => { /* swallow */ });
+    };
+    signal?.addEventListener('abort', abortHandler);
 
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split('\n');
-      buffer = lines.pop() || '';
+    try {
+      while (true) {
+        if (signal?.aborted) return;
 
-      for (const line of lines) {
-        const trimmed = line.trim();
-        if (!trimmed || !trimmed.startsWith('data: ')) continue;
+        const { done, value } = await reader.read();
+        if (done) break;
 
-        const data = trimmed.slice(6);
-        if (data === '[DONE]') {
-          onDone();
-          return;
-        }
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
 
-        try {
-          const parsed = JSON.parse(data);
-          const content = parsed.choices?.[0]?.delta?.content;
-          if (content) {
-            onChunk(content);
+        for (const line of lines) {
+          if (signal?.aborted) return;
+          const trimmed = line.trim();
+          if (!trimmed || !trimmed.startsWith('data: ')) continue;
+
+          const data = trimmed.slice(6);
+          if (data === '[DONE]') {
+            onDone();
+            return;
           }
-        } catch {
-          // skip malformed chunks
+
+          try {
+            const parsed = JSON.parse(data);
+            const content = parsed.choices?.[0]?.delta?.content;
+            if (content) {
+              onChunk(content);
+            }
+          } catch {
+            // skip malformed chunks
+          }
         }
       }
-    }
 
-    onDone();
+      onDone();
+    } finally {
+      signal?.removeEventListener('abort', abortHandler);
+    }
   } catch (err) {
+    // Abort shows up as a DOMException/AbortError — that's expected, not
+    // an error to surface to the user.
+    if (signal?.aborted || (err instanceof Error && err.name === 'AbortError')) {
+      return;
+    }
     onError(err instanceof Error ? err.message : 'Network error');
   }
 }
