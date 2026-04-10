@@ -41,21 +41,21 @@ describe('worker', () => {
       );
     });
 
-    it('accepts a Cloudflare Pages preview subdomain', async () => {
+    it('accepts a Cloudflare Pages preview subdomain (wyrdroom.pages.dev)', async () => {
       const response = await worker.fetch(
         req('https://worker.example/api/health', {
           method: 'GET',
-          origin: 'https://a1b2c3.apoc.pages.dev',
+          origin: 'https://a1b2c3.wyrdroom.pages.dev',
         }),
         env,
       );
       expect(response.status).toBe(200);
       expect(response.headers.get('Access-Control-Allow-Origin')).toBe(
-        'https://a1b2c3.apoc.pages.dev',
+        'https://a1b2c3.wyrdroom.pages.dev',
       );
     });
 
-    it('accepts the future wyrdroom.com apex origin', async () => {
+    it('accepts the wyrdroom.com apex origin', async () => {
       const response = await worker.fetch(
         req('https://worker.example/api/health', {
           method: 'GET',
@@ -69,14 +69,31 @@ describe('worker', () => {
       );
     });
 
-    it('rejects a suffix-attack origin (historical vulnerability)', async () => {
-      // The previous implementation used raw-string `endsWith`, which would
-      // have accepted this attacker-controlled host. The structured URL
-      // parser blocks it because the hostname is "apoc.pages.dev.evil.example".
+    it('rejects the retired apoc.pages.dev legacy origin', async () => {
+      // During the rebrand transition (Shipment 2 Phase 1), the legacy
+      // apoc.pages.dev was kept in the allow-list so production wouldn't
+      // break mid-cutover. After the cutover landed and wyrdroom.com was
+      // verified live, the legacy entries were removed. Requests from
+      // the old URL should now be rejected cleanly.
       const response = await worker.fetch(
         req('https://worker.example/api/health', {
           method: 'GET',
-          origin: 'https://apoc.pages.dev.evil.example',
+          origin: 'https://apoc.pages.dev',
+        }),
+        env,
+      );
+      expect(response.status).toBe(403);
+    });
+
+    it('rejects a suffix-attack origin (historical vulnerability)', async () => {
+      // The previous implementation used raw-string `endsWith`, which would
+      // have accepted this attacker-controlled host. The structured URL
+      // parser blocks it because the hostname is
+      // "wyrdroom.com.evil.example", not "wyrdroom.com".
+      const response = await worker.fetch(
+        req('https://worker.example/api/health', {
+          method: 'GET',
+          origin: 'https://wyrdroom.com.evil.example',
         }),
         env,
       );

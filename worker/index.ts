@@ -25,14 +25,9 @@ const EXACT_ALLOWED_ORIGINS = new Set<string>([
   'http://127.0.0.1:5173',
   'http://127.0.0.1:5174',
   'http://127.0.0.1:4173',
-  // Wyrdroom production (current target)
+  // Wyrdroom production
   'https://wyrdroom.com',
   'https://www.wyrdroom.com',
-  // Legacy APOC production — kept during the rebrand transition so the
-  // old pages.dev URL keeps working until the Cloudflare Pages custom
-  // domain cutover. Can be removed once production traffic has moved
-  // entirely to wyrdroom.com.
-  'https://apoc.pages.dev',
 ]);
 
 // Parent hostnames whose subdomains are allowed. Subdomain matching uses
@@ -41,8 +36,6 @@ const EXACT_ALLOWED_ORIGINS = new Set<string>([
 const ALLOWED_PARENT_HOSTNAMES = [
   'wyrdroom.com',
   'wyrdroom.pages.dev',
-  // Legacy — remove after the Cloudflare Pages custom domain cutover.
-  'apoc.pages.dev',
 ];
 
 function isOriginAllowed(rawOrigin: string): boolean {
