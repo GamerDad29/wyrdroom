@@ -60,26 +60,25 @@ Closed:
 - **BUG-03** Sidebar resize — ref-based width at mouse-up
 - **TEST-01** Vitest harness + service coverage extended
 
-### 🟡 Shipment 2 Phase 1 — Worker Hardening (shipped 2026-04-10)
+### ✅ Shipment 2 — COMPLETE (shipped 2026-04-10)
 
-Commit `c82400d` on main, 34/34 tests passing. Not yet pushed.
+Wyrdroom is live at `https://wyrdroom.com`. All three phases landed
+the same day. 35/35 tests passing.
 
-Closed:
-- **SEC-02** Strict origin validation — parsed URL, exact host allow-list,
-  structured subdomain matching, forward-compat for `wyrdroom.com`
-- **SEC-01** Removed `VITE_PROXY_SECRET` from browser bundle and worker
-- **OPS-01** In-memory per-IP rate limiting (v0 tier)
+**Phase 1 — Worker Hardening** (commit `c82400d`, pushed to main)
+- **SEC-02** Strict origin validation — parsed URL, exact host
+  allow-list, structured subdomain matching
+- **SEC-01** Removed `VITE_PROXY_SECRET` from browser bundle and
+  worker
+- **OPS-01** In-memory per-IP rate limiting (v0 tier; KV/DO-backed
+  limiter deferred to Shipment 4)
 - **BUG-05** `/api/models` derived from shared manifest
 - **REF-02** Shared agent manifest as single source of truth
 
-Deferred to Shipment 4: KV/DO-backed rate limiter (this is per-isolate).
-
-### 🟡 Shipment 2 Phase 2 — Rebrand code (staged 2026-04-10)
-
-Commit `5c70060` on `wyrdroom-rebrand` branch. Not merged to main.
-22 files changed, 34/34 tests still passing.
-
-Closed:
+**Phase 2 — Rebrand code** (commits `5c70060`, `57aad29`, `2e2731c`
+on `wyrdroom-rebrand`, merged to main as `c57a013`)
+- **REBRAND-01** Infrastructure rename (repo, worker, domain — see
+  Phase 3)
 - **REBRAND-02** Branding, palette tokens, typography, room→hall
   terminology, room renames (Main Hall / War Room / The Forge /
   The Loom)
@@ -88,18 +87,26 @@ Closed:
 - **REBRAND-04** localStorage key renames (`apoc_*` → `wyrd_*`),
   Scribe note filename prefix (`apoc-` → `wyrd-`), `/vault save`
   help text, `apoc-chatroom-spec.md` → `wyrdroom-spec.md`
+- **POLISH-01** Noto Sans Runic font loaded via Google Fonts with
+  `unicode-range: U+16A0–16F8` for per-glyph swap
+- CI workflow updated to build against `wyrdroom-proxy` and drop
+  `VITE_PROXY_SECRET`
 
-Main branch stays APOC-branded until Christopher does Phase 3 infra
-cutover, at which point `wyrdroom-rebrand` gets merged.
-
-### ⏳ Shipment 2 Phase 3 — Infra cutover (needs Christopher)
-
-Open: REBRAND-01. Requires dashboard access:
-- GitHub repo rename (`apoc` → `wyrdroom`)
-- Delete old `apoc-proxy` Worker in Cloudflare
-- `wrangler deploy` under new name `wyrdroom-proxy`
-- Cloudflare Pages custom domain setup (`wyrdroom.com`)
-- `git remote set-url` locally
+**Phase 3 — Infra cutover + cleanup** (Christopher + automation +
+commit `1743353`)
+- GitHub repo `GamerDad29/apoc` → `GamerDad29/wyrdroom`
+- `wyrdroom-proxy` Worker deployed with `OPENROUTER_API_KEY` secret
+- `apoc-proxy` Worker deleted
+- `wyrdroom.com` + `www.wyrdroom.com` custom domains attached to
+  the Pages project; CNAMEs added via dashboard
+- Pages `VITE_WORKER_URL` env var updated
+- `wyrdroom-rebrand` merged to `main`; CI deployed
+- Playwright smoke test from fresh browser at
+  `https://wyrdroom.com` — all UI elements, runes, chat round
+  trip verified end-to-end
+- **Cleanup**: legacy `apoc.pages.dev` entries removed from worker
+  allow-list and tests; worker redeployed; `apoc.pages.dev` now
+  returns 403 from the worker
 
 ### ⏳ Shipment 3 — Usability
 Open: FEAT-01, FEAT-02, FEAT-04, FEAT-05, FEAT-11, VAULT-01

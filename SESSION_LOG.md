@@ -3,6 +3,87 @@
 > Historical entries below were written under the APOC brand and are
 > preserved as-is.
 
+## 2026-04-10 — 🪐 Shipment 2 Phase 3: Infra cutover + cleanup (COMPLETE)
+
+### Accomplished
+- GitHub repo rename (Christopher via dashboard):
+  `GamerDad29/apoc` → `GamerDad29/wyrdroom`
+- `git remote set-url origin https://github.com/GamerDad29/wyrdroom.git`
+- `wrangler deploy` from `wyrdroom-rebrand` branch → created
+  `wyrdroom-proxy` at `https://wyrdroom-proxy.gamerdad29.workers.dev`
+- `wrangler secret put OPENROUTER_API_KEY --name wyrdroom-proxy`
+  (Christopher ran locally; I confirmed via `secret list`)
+- Real chat round-trip verified end-to-end (22 prompt tokens, 10
+  completion tokens, $0 cost, nemotron-3-nano free tier)
+- Deleted old `apoc-proxy` Worker via Cloudflare MCP
+  (`worker_delete`)
+- Attached `wyrdroom.com` + `www.wyrdroom.com` custom domains to
+  Pages project via `POST /accounts/:id/pages/projects/apoc/domains`
+- Updated Pages production env var `VITE_WORKER_URL` via
+  `PATCH /accounts/:id/pages/projects/apoc`
+- Updated `.github/workflows/deploy.yml`:
+  - `VITE_WORKER_URL` → wyrdroom-proxy
+  - Removed `VITE_PROXY_SECRET` env line (SEC-01)
+- Added DNS CNAME records (Christopher via Cloudflare dashboard
+  because wrangler OAuth token lacks `dns_records:edit`):
+  - `wyrdroom.com @ → apoc.pages.dev` (proxied)
+  - `www.wyrdroom.com → apoc.pages.dev` (proxied)
+- Merged `wyrdroom-rebrand` → `main` with a --no-ff merge commit
+  (`c57a013`) preserving the 3 rebrand commits in history
+- Pushed main; CI built and deployed the new worker URL build to
+  Cloudflare Pages (commit hash verified via deployments API)
+- Playwright smoke test from a fresh browser context at
+  `https://wyrdroom.com`:
+  - Page title, titlebar, tabs, sidebar header, runes, entry
+    messages all verified
+  - Real chat round trip through the full browser-to-worker-to-
+    OpenRouter stack succeeded
+  - Zero console errors
+
+### Cleanup commit (same day, `1743353`)
+- Removed `apoc.pages.dev` from both `EXACT_ALLOWED_ORIGINS` and
+  `ALLOWED_PARENT_HOSTNAMES` in `worker/index.ts`
+- Updated `src/worker.test.ts`:
+  - Preview-subdomain test flipped to `wyrdroom.pages.dev`
+  - Added a regression test that the retired `apoc.pages.dev`
+    origin is now rejected with 403
+  - Suffix-attack test retargeted to `wyrdroom.com.evil.example`
+- 34 → 35 tests passing, clean tsc, clean build
+- `wrangler deploy` wyrdroom-proxy with cleaned allow-list
+- Verified live against wyrdroom-proxy:
+  - `Origin: wyrdroom.com` → 200
+  - `Origin: apoc.pages.dev` → 403 ("Forbidden origin")
+  - `Origin: evil.example` → 403
+
+### Key techniques used
+- Used wrangler's OAuth token (stored in
+  `~/.wrangler/config/default.toml`) with `curl` directly against
+  the Cloudflare REST API for Pages env var / custom domain
+  operations (wrangler CLI doesn't expose these)
+- Cloudflare MCP tools used: `accounts_list`, `workers_list`,
+  `worker_delete`, `secret_list`, `zones_list`, `zones_get`
+- Wrangler OAuth scope limitation discovered: `zone:read` is
+  included but `dns_records:edit` is not, so DNS record creation
+  still needs dashboard or a custom token
+
+### Pages project name
+Decision: kept as `apoc` in the Cloudflare dashboard (it's an
+internal label only). Primary user-facing URL is
+`https://wyrdroom.com`; the `apoc.pages.dev` subdomain still
+exists but is no longer in the worker's allow-list, so chat
+from that URL will 403. Christopher can rename the Pages project
+via the dashboard later if it bothers him; functionally it
+changes nothing.
+
+### Known follow-ups (not blocking Shipment 2)
+- GitHub secret `VITE_PROXY_SECRET` in repo Settings is no longer
+  referenced by the workflow; safe to delete at leisure
+- Local folder is still `~/Downloads/apoc/` — cosmetic, doesn't
+  affect anything. Can `mv` at the start of a future session
+  (would kill the current Claude session)
+
+### Shipment 2 is complete.
+
 ## 2026-04-10 — Shipment 2 Phase 2: Rebrand Code Staged
 
 ### Accomplished

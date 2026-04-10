@@ -1,8 +1,87 @@
 # Wyrdroom Changelog
 
 > Historical entries below were written under the APOC brand and are
-> preserved as-is. The project was renamed to Wyrdroom on 2026-04-10
-> (Shipment 2 Phase 2 of the rebrand arc).
+> preserved as-is. The project was renamed to Wyrdroom on 2026-04-10.
+
+## 2026-04-10 — 🪐 Shipment 2 COMPLETE: Wyrdroom is live
+
+Production is running on `https://wyrdroom.com` with the new worker,
+new branding, strict security posture, and the legacy APOC entries
+retired. End-to-end verified via Playwright against the live site.
+
+### Phase 3 — Infrastructure cutover (executed this session)
+
+- **GitHub repo renamed** `GamerDad29/apoc` → `GamerDad29/wyrdroom`
+  (by Christopher); local git remote updated to match
+- **New Cloudflare Worker deployed**: `wyrdroom-proxy` at
+  `https://wyrdroom-proxy.gamerdad29.workers.dev`
+- **OPENROUTER_API_KEY secret** set on the new worker via
+  `wrangler secret put`
+- **Old `apoc-proxy` Worker deleted** via Cloudflare MCP
+- **Pages custom domains attached**: `wyrdroom.com` and
+  `www.wyrdroom.com`, both proxied through Cloudflare
+- **DNS records** added: apex CNAME `wyrdroom.com → apoc.pages.dev`
+  (proxied, orange cloud on) plus `www` CNAME to the same target
+  (Pages project name kept as `apoc` internally — it's a label,
+  not user-visible)
+- **Pages production env var** `VITE_WORKER_URL` updated to the new
+  worker URL
+- **GitHub Actions workflow** updated: build target flipped to
+  `wyrdroom-proxy.gamerdad29.workers.dev`, `VITE_PROXY_SECRET` line
+  removed entirely (SEC-01 killed the mechanism)
+- **`wyrdroom-rebrand` branch merged to `main`** (commit `c57a013`)
+  with a merge commit preserving the rebrand history
+- **CI built and deployed** the merged main to Cloudflare Pages;
+  verified the new build is serving at `https://wyrdroom.com`
+
+### Phase 3 cleanup (same-day follow-up commit `1743353`)
+
+- **Removed `apoc.pages.dev` from `worker/index.ts`** allow-list
+  (both the exact-origins Set and the parent-hostnames list)
+- **Removed the transitional "Legacy — remove after cutover"**
+  comments
+- **Redeployed wyrdroom-proxy** with the cleaned allow-list
+- **Updated `src/worker.test.ts`**:
+  - Preview-subdomain test now uses `wyrdroom.pages.dev`
+  - New regression test: `rejects the retired apoc.pages.dev
+    legacy origin` (403)
+  - Suffix-attack test now targets `wyrdroom.com.evil.example`
+- 34 → 35 tests passing
+
+### Live verification (Playwright + curl against `https://wyrdroom.com`)
+
+- Page title: `Wyrdroom` ✅
+- Titlebar: `ᚹ WYRDROOM` (Wunjo rune + brand name, Noto Sans Runic
+  font loaded) ✅
+- Room tabs: Main Hall · War Room · The Forge · The Loom ✅
+- Sidebar: "In This Hall" ✅
+- All 11 Elder Futhark runes flanking entry messages, DOM-verified
+  as Unicode codepoints ✅
+- Health endpoint through `wyrdroom-proxy`: 200 OK ✅
+- Chat round trip (Nemotron 3 Nano free tier, 10 tokens): real
+  OpenRouter response, $0 cost ✅
+- CORS posture:
+  - Origin `https://wyrdroom.com` → 200
+  - Origin `https://apoc.pages.dev` → **403 (retired)**
+  - Origin `https://evil.example` → **403**
+- Zero console errors
+
+### Summary of Shipment 2
+
+Between Phase 1 (worker hardening), Phase 2 (rebrand code), and
+Phase 3 (infra cutover + cleanup), Shipment 2 shipped:
+
+- Strict origin validation (SEC-02)
+- Removed bundled VITE_PROXY_SECRET (SEC-01)
+- Per-IP rate limiting (OPS-01)
+- Shared agent manifest + `/api/models` drift fix (BUG-05, REF-02)
+- Full APOC → Wyrdroom rebrand (REBRAND-01, 02, 03, 04)
+- Noto Sans Runic font loading (POLISH-01)
+- Cleanup of transitional allow-list entries
+
+Open for Shipment 3: usability features (Room Control Panel,
+Pinned Session Brief, Message-Level Actions, mention autocomplete,
+vault hardening).
 
 ## 2026-04-10 — Shipment 2 Phase 2: Rebrand Code Staged
 
