@@ -74,10 +74,23 @@ Closed:
 
 Deferred to Shipment 4: KV/DO-backed rate limiter (this is per-isolate).
 
-### ⏳ Shipment 2 Phase 2 — Rebrand (code-only portion)
+### 🟡 Shipment 2 Phase 2 — Rebrand code (staged 2026-04-10)
 
-Open: REBRAND-02, REBRAND-03, REBRAND-04. All pure code changes per
-the rename map in `wyrdroom-rebrand.md`. Branch strategy TBD.
+Commit `5c70060` on `wyrdroom-rebrand` branch. Not merged to main.
+22 files changed, 34/34 tests still passing.
+
+Closed:
+- **REBRAND-02** Branding, palette tokens, typography, room→hall
+  terminology, room renames (Main Hall / War Room / The Forge /
+  The Loom)
+- **REBRAND-03** Agent prompts (`_template.ts`, `profiles.ts`) plus
+  Elder Futhark rune map in entry messages
+- **REBRAND-04** localStorage key renames (`apoc_*` → `wyrd_*`),
+  Scribe note filename prefix (`apoc-` → `wyrd-`), `/vault save`
+  help text, `apoc-chatroom-spec.md` → `wyrdroom-spec.md`
+
+Main branch stays APOC-branded until Christopher does Phase 3 infra
+cutover, at which point `wyrdroom-rebrand` gets merged.
 
 ### ⏳ Shipment 2 Phase 3 — Infra cutover (needs Christopher)
 

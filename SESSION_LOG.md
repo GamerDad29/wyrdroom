@@ -1,5 +1,41 @@
 # APOC Session Log
 
+## 2026-04-10 — Shipment 2 Phase 2: Rebrand Code Staged
+
+### Accomplished
+- Created `wyrdroom-rebrand` branch from main
+- Executed full rename map from `wyrdroom-rebrand.md` (22 files,
+  commit `5c70060`)
+- All `src/*` code, CSS, HTML, agent prompts, room names, storage
+  keys, and doc titles flipped to Wyrdroom
+- Elder Futhark rune map for entry/exit messages added to
+  `useChat.ts`
+- Spec file renamed (`apoc-chatroom-spec.md` → `wyrdroom-spec.md`)
+  and contents updated
+- `package-lock.json` regenerated against `"name": "wyrdroom"`
+- 34/34 tests passing; clean tsc; clean build (352 kB / 112 kB gzip)
+- Branch pushed to origin; not merged
+
+### Known Issues / Carry-over
+- Production (`apoc.pages.dev`) is still APOC-branded. It will stay
+  that way until Christopher completes Phase 3 infra cutover.
+- Worker on main keeps `apoc.pages.dev` in both the exact allow-list
+  and the parent-hostname list as legacy entries. Both are marked
+  with comments saying "remove after the Cloudflare Pages custom
+  domain cutover."
+
+### Next: Phase 3 (needs Christopher's hands)
+1. GitHub: rename repo `GamerDad29/apoc` → `GamerDad29/wyrdroom`
+   via browser UI
+2. Local: `git remote set-url origin https://github.com/GamerDad29/wyrdroom.git`
+3. Cloudflare: delete old `apoc-proxy` Worker in dashboard
+4. Local: `cd worker && wrangler deploy` (creates `wyrdroom-proxy`)
+5. Cloudflare Pages: connect `wyrdroom.com` custom domain
+6. Local (optional): `mv ~/Downloads/apoc ~/Downloads/wyrdroom`
+7. Merge `wyrdroom-rebrand` branch to `main`
+8. Delete the legacy `apoc.pages.dev` entries from `worker/index.ts`
+   in a follow-up commit
+
 ## 2026-04-10 — Shipment 2 Phase 1: Worker Hardening
 
 ### Accomplished

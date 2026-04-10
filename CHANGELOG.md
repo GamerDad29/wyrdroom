@@ -1,5 +1,35 @@
 # APOC Changelog
 
+## 2026-04-10 — Shipment 2 Phase 2: Rebrand Code Staged
+
+The code-only half of the APOC → Wyrdroom rebrand is staged on the
+`wyrdroom-rebrand` branch. Not merged to `main` yet. Production
+continues to run under the APOC brand until Christopher completes the
+Phase 3 infra cutover (GitHub repo rename, `wrangler deploy` under
+the new `wyrdroom-proxy` name, Cloudflare Pages custom domain
+`wyrdroom.com`, `git remote set-url`).
+
+### On the branch
+- 22 files changed, full file-by-file rename map from
+  `wyrdroom-rebrand.md` executed
+- Titlebar: APOC → ᚹ WYRDROOM (Wunjo rune + brand name)
+- Rooms: Main Hall, War Room, The Forge, The Loom
+- All `apoc_*` localStorage keys → `wyrd_*` (no migration; v0)
+- Elder Futhark runes flank every agent's entry/exit notice
+- `package.json` name, `index.html` title, `wrangler.toml` name all
+  flipped
+- `apoc-chatroom-spec.md` renamed to `wyrdroom-spec.md`
+- Backlog handoff doc fully rebranded; CHANGELOG + SESSION_LOG titled
+  Wyrdroom with historical entries preserved
+- `README.md` rewritten with Wyrdroom tagline and new security notes
+- 34/34 tests still passing, clean tsc + clean build
+- Commit `5c70060` on `wyrdroom-rebrand`
+
+### On main
+This document and `main` still reflect the APOC brand. Once the
+Phase 3 infra cutover is complete, `wyrdroom-rebrand` will be merged
+and `main` itself will flip.
+
 ## 2026-04-10 — Shipment 2 Phase 1: Worker Hardening
 
 Security-layer half of the Wyrdroom arc, landing under the APOC brand
