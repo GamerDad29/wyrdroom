@@ -30,5 +30,5 @@ export function generateExportFilename(roomName: string): string {
   const date = new Date().toISOString().slice(0, 10);
   const time = new Date().toISOString().slice(11, 16).replace(':', '');
   const slug = roomName.toLowerCase().replace(/\s+/g, '-');
-  return `apoc-${slug}-${date}-${time}.md`;
+  return `wyrd-${slug}-${date}-${time}.md`;
 }

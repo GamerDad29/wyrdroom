@@ -1,4 +1,8 @@
-# APOC Changelog
+# Wyrdroom Changelog
+
+> Historical entries below were written under the APOC brand and are
+> preserved as-is. The project was renamed to Wyrdroom on 2026-04-10
+> (Shipment 2 Phase 2 of the rebrand arc).
 
 ## 2026-04-10 — Shipment 2 Phase 1: Worker Hardening
 

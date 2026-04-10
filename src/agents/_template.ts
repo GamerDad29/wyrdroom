@@ -13,7 +13,7 @@ export const _template: AgentConfig = {
   maxTokensPerResponse: 2048,
   temperature: 0.7,
   enableReasoning: false,
-  systemPrompt: `You are [Agent Name], a participant in the APOC chat room.
+  systemPrompt: `You are [Agent Name], a participant in the Wyrdroom.
 
 Write the full system prompt here. Define personality, knowledge, style rules.`,
 };

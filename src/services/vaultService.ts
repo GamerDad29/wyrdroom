@@ -7,11 +7,11 @@
 const VAULT_URLS = ['http://127.0.0.1:27123', 'https://127.0.0.1:27124', 'http://127.0.0.1:27124'];
 let activeVaultUrl: string | null = null;
 
-let apiKey = localStorage.getItem('apoc_vault_key') || '';
+let apiKey = localStorage.getItem('wyrd_vault_key') || '';
 
 export function setVaultApiKey(key: string): void {
   apiKey = key;
-  localStorage.setItem('apoc_vault_key', key);
+  localStorage.setItem('wyrd_vault_key', key);
 }
 
 export function getVaultApiKey(): string {

@@ -68,7 +68,7 @@ export function parseCommand(input: string, _userId: string, userName: string): 
             '/vault read <path> ... Read a note into chat',
             '/vault write <path> .. Write last Scribe notes to vault',
             '/vault list [folder] . List files in vault',
-            '/vault save .......... Save last notes to vault (APOC folder)',
+            '/vault save .......... Save last notes to vault (Wyrdroom folder)',
           ].join('\n'),
         };
       }

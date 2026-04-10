@@ -11,7 +11,7 @@ interface Props {
 export default function UserList({ users, onClickAgent, getExpression }: Props) {
   return (
     <div className="user-list">
-      <div className="user-list-header">In This Room</div>
+      <div className="user-list-header">In This Hall</div>
       {users.map((user) => (
         <div key={user.id} className="user-card">
           <AnimatedAvatar

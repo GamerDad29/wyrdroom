@@ -81,7 +81,7 @@ html, body, #root {
 }
 
 /* WINDOW CHROME */
-.apoc-window {
+.wyrd-window {
   display: flex;
   flex-direction: column;
   height: 100vh;
@@ -89,7 +89,7 @@ html, body, #root {
   border: 2px solid var(--border);
 }
 
-.apoc-titlebar {
+.wyrd-titlebar {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -100,7 +100,7 @@ html, body, #root {
   flex-shrink: 0;
 }
 
-.apoc-titlebar h1 {
+.wyrd-titlebar h1 {
   font-size: 14px;
   font-weight: 400;
   letter-spacing: 4px;
@@ -109,7 +109,14 @@ html, body, #root {
   text-shadow: 0 0 10px rgba(240, 199, 94, 0.4);
 }
 
-.apoc-titlebar-controls {
+/* Elder Futhark rune used as the Wyrdroom brand mark */
+.wyrd-rune {
+  opacity: 0.75;
+  margin-right: 6px;
+  display: inline-block;
+}
+
+.wyrd-titlebar-controls {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -136,12 +143,12 @@ html, body, #root {
   border-color: var(--green-dim);
 }
 
-.apoc-titlebar-buttons {
+.wyrd-titlebar-buttons {
   display: flex;
   gap: 4px;
 }
 
-.apoc-titlebar-btn {
+.wyrd-titlebar-btn {
   width: 14px;
   height: 14px;
   border: 1px solid var(--border);
@@ -295,7 +302,7 @@ html, body, #root {
 }
 
 /* MAIN LAYOUT */
-.apoc-body {
+.wyrd-body {
   display: flex;
   flex: 1;
   overflow: hidden;

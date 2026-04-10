@@ -1,5 +1,5 @@
 let audioCtx: AudioContext | null = null;
-let enabled = localStorage.getItem('apoc_sound') !== 'off';
+let enabled = localStorage.getItem('wyrd_sound') !== 'off';
 
 function getCtx(): AudioContext {
   if (!audioCtx) {
@@ -14,7 +14,7 @@ export function isSoundEnabled(): boolean {
 
 export function toggleSound(): boolean {
   enabled = !enabled;
-  localStorage.setItem('apoc_sound', enabled ? 'on' : 'off');
+  localStorage.setItem('wyrd_sound', enabled ? 'on' : 'off');
   return enabled;
 }
 

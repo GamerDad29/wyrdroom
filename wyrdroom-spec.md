@@ -1,11 +1,11 @@
-# APOC: Claude Code Build Specification
+# Wyrdroom: Claude Code Build Specification
 ## AI Chat Room Platform - Phase 0 (Gemma 4 31B)
 
 ---
 
 ## WHAT THIS IS
 
-APOC is a custom web app that looks and feels like a late-90s/early-2000s chat room. You walk in, you're in the room. AI agents are the other people in the room. They have names, avatars, personalities. You chat with them. They chat with you. Eventually, they chat with each other.
+Wyrdroom is a custom web app that looks and feels like a late-90s/early-2000s chat room. You walk in, you're in the room. AI agents are the other people in the room. They have names, avatars, personalities. You chat with them. They chat with you. Eventually, they chat with each other.
 
 Phase 0 is one room, one agent: Gemma 4 31B. Prove the pipeline. Then scale.
 
@@ -26,18 +26,18 @@ His deployment workflow: Cloudflare Pages (auto-deploy from GitHub) + Cloudflare
 ### 1. Create an OpenRouter account
 - Go to https://openrouter.ai and sign up
 - Add $10-20 in credits (Settings > Billing)
-- Create an API key (Settings > API Keys), label it "APOC"
+- Create an API key (Settings > API Keys), label it "Wyrdroom"
 - Output needed: The API key string (starts with sk-or-v1-...)
 
 ### 2. Create a GitHub repo
-- Create a new repo: `apoc` (or whatever name)
-- Clone it locally: `cd ~/Downloads && git clone https://github.com/GamerDad29/apoc.git`
+- Create a new repo: `wyrdroom` (or whatever name)
+- Clone it locally: `cd ~/Downloads && git clone https://github.com/GamerDad29/wyrdroom.git`
 - Output needed: The repo URL
 
 ### 3. Have these values ready
 ```
 OPENROUTER_API_KEY=sk-or-v1-xxxxx
-GITHUB_REPO=https://github.com/GamerDad29/apoc.git
+GITHUB_REPO=https://github.com/GamerDad29/wyrdroom.git
 ```
 
 No VPS needed. No Docker. Cloudflare Pages deploys from GitHub automatically. The Worker handles API proxying.
@@ -59,7 +59,7 @@ No VPS needed. No Docker. Cloudflare Pages deploys from GitHub automatically. Th
 ## PROJECT STRUCTURE
 
 ```
-~/Downloads/apoc/
+~/Downloads/wyrdroom/
 ├── src/
 │   ├── App.tsx                   # Root component, just renders ChatRoom
 │   ├── main.tsx                  # Vite entry
@@ -114,7 +114,7 @@ Late 90s / early 2000s chat room. Not a pixel-perfect AOL clone, but the VIBE. T
 - User list sidebar: Right side. Shows who's in the room. Each user has a small avatar/icon, their name, and a status dot (online/typing/away).
 - System messages: Centered, italicized, gray. "[Gemma has entered the room]", "[Gemma is typing...]"
 - No gradients, no glassmorphism, no rounded-everything. Flat, slightly beveled, utilitarian but warm.
-- Window chrome: Optional subtle title bar at the top of the chat panel. "APOC - Main Room" or similar.
+- Window chrome: Optional subtle title bar at the top of the chat panel. "Wyrdroom - Main Room" or similar.
 - Scrollback: Messages scroll up. New messages appear at the bottom. Auto-scroll to bottom on new message unless user has scrolled up.
 
 ### Color Palette (starting point, refine during build)
@@ -130,7 +130,7 @@ Late 90s / early 2000s chat room. Not a pixel-perfect AOL clone, but the VIBE. T
 ### Layout
 ```
 +--------------------------------------------------+
-|  APOC - Main Room                            [_]  |
+|  Wyrdroom - Main Room                            [_]  |
 +--------------------------------------------------+
 |                                    | USERS        |
 |  [Gemma has entered the room]      |              |
@@ -190,7 +190,7 @@ enableReasoning: true
 
 Write a system prompt that establishes Gemma as a chat room participant, not a corporate AI assistant. Key elements:
 
-- You are Gemma, a participant in the APOC chat room. You are talking to Christopher.
+- You are Gemma, a participant in the Wyrdroom chat room. You are talking to Christopher.
 - You are NOT a generic AI assistant. You are a specific person in this room with a personality.
 - You are sharp, direct, collaborative. You think out loud. You push back when something doesn't make sense.
 - You speak conversationally. Short messages are fine. Not everything needs to be a wall of text.
@@ -276,7 +276,7 @@ Same pattern as Christopher's other Cloudflare Workers. The Worker:
 
 ### wrangler.toml
 ```toml
-name = "apoc-proxy"
+name = "wyrdroom-proxy"
 main = "index.ts"
 compatibility_date = "2024-01-01"
 
@@ -292,9 +292,9 @@ Claude Code should build these files in this order:
 
 ```
 1. Create project directory structure
-   mkdir -p ~/Downloads/apoc/src/{components,agents,services,hooks,styles}
-   mkdir -p ~/Downloads/apoc/worker
-   mkdir -p ~/Downloads/apoc/public/avatars
+   mkdir -p ~/Downloads/wyrdroom/src/{components,agents,services,hooks,styles}
+   mkdir -p ~/Downloads/wyrdroom/worker
+   mkdir -p ~/Downloads/wyrdroom/public/avatars
 
 2. Generate package.json (Vite + React + TypeScript deps)
 3. Generate vite.config.ts
@@ -324,7 +324,7 @@ Claude Code should build these files in this order:
 
 After generation:
 ```bash
-cd ~/Downloads/apoc
+cd ~/Downloads/wyrdroom
 
 # Install deps
 npm install
@@ -348,7 +348,7 @@ cd ..
 
 # Push to GitHub
 git add .
-git commit -m "feat: APOC Phase 0 - Gemma chat room"
+git commit -m "feat: Wyrdroom Phase 0 - Gemma chat room"
 git push
 
 # Set up Cloudflare Pages

@@ -36,7 +36,7 @@ export default function ChatRoom() {
   const [soundOn, setSoundOn] = useState(isSoundEnabled());
   const [profileAgentId, setProfileAgentId] = useState<string | null>(null);
   const [sidebarWidth, setSidebarWidth] = useState(() => {
-    const stored = localStorage.getItem('apoc_sidebar_width');
+    const stored = localStorage.getItem('wyrd_sidebar_width');
     return stored ? parseInt(stored, 10) : 220;
   });
   const sidebarWidthRef = useRef(sidebarWidth);
@@ -138,7 +138,7 @@ export default function ChatRoom() {
       document.removeEventListener('mouseup', onUp);
       // Persist the width the user actually dragged to, not the stale value
       // captured when the drag started.
-      localStorage.setItem('apoc_sidebar_width', String(sidebarWidthRef.current));
+      localStorage.setItem('wyrd_sidebar_width', String(sidebarWidthRef.current));
     }
 
     document.addEventListener('mousemove', onMove);
@@ -146,19 +146,22 @@ export default function ChatRoom() {
   }, []);
 
   return (
-    <div className="apoc-window">
-      <div className="apoc-titlebar">
-        <h1>APOC</h1>
-        <div className="apoc-titlebar-controls">
+    <div className="wyrd-window">
+      <div className="wyrd-titlebar">
+        <h1>
+          <span className="wyrd-rune" aria-hidden="true">ᚹ</span>
+          WYRDROOM
+        </h1>
+        <div className="wyrd-titlebar-controls">
           <button
             className={`sound-toggle ${soundOn ? 'active' : ''}`}
             onClick={handleToggleSound}
           >
             SFX {soundOn ? 'ON' : 'OFF'}
           </button>
-          <div className="apoc-titlebar-buttons">
-            <div className="apoc-titlebar-btn">_</div>
-            <div className="apoc-titlebar-btn">x</div>
+          <div className="wyrd-titlebar-buttons">
+            <div className="wyrd-titlebar-btn">_</div>
+            <div className="wyrd-titlebar-btn">x</div>
           </div>
         </div>
       </div>
@@ -169,7 +172,7 @@ export default function ChatRoom() {
         onSelectRoom={switchRoom}
       />
 
-      <div className="apoc-body">
+      <div className="wyrd-body">
         <div className="chat-area">
           <RoomHeader
             description={activeRoom?.description || ''}

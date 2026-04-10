@@ -1,4 +1,4 @@
-# APOC Claude Handoff
+# Wyrdroom Claude Handoff
 
 ## Purpose
 
@@ -9,11 +9,11 @@ This document is a working handoff for Claude to:
 3. Review the product as a product, not just a codebase
 4. Recommend feature additions, UX changes, and structural improvements
 
-This is based on direct code review of the current repo state, plus a feature review against the product intent in `README.md`, `apoc-chatroom-spec.md`, and `CHANGELOG.md`.
+This is based on direct code review of the current repo state, plus a feature review against the product intent in `README.md`, `wyrdroom-spec.md`, and `CHANGELOG.md`.
 
 ## Current State Summary
 
-APOC already has a strong product identity:
+Wyrdroom already has a strong product identity:
 
 - Distinct retro chat-room presentation
 - Multi-room multi-agent setup
@@ -325,7 +325,7 @@ Suggested controls:
 Why this matters:
 
 - makes the app understandable without memorizing commands
-- turns APOC into a facilitation tool, not just a themed chat client
+- turns Wyrdroom into a facilitation tool, not just a themed chat client
 
 ### 2. Session Goals and Pinned Context
 
@@ -406,7 +406,7 @@ Suggested templates:
 
 Why this matters:
 
-- gives APOC a product loop that ordinary chat apps do not have
+- gives Wyrdroom a product loop that ordinary chat apps do not have
 
 ### 7. Visible Cost and Budget UI
 
@@ -544,7 +544,7 @@ The desktop feel is good. Mobile likely needs:
 - less cramped titlebar controls
 - action menu instead of always-visible utility controls
 
-## Epic 0. Wyrdroom Rebrand (APOC → Wyrdroom)
+## Epic 0. Wyrdroom Rebrand (Wyrdroom → Wyrdroom)
 
 Full rename tracked in `C:\Users\Clyle\OneDrive\Documents\wyrdroom-rebrand.md`. That doc is the source of truth — execute against it, don't re-derive the rename map.
 
@@ -556,10 +556,10 @@ Full rename tracked in `C:\Users\Clyle\OneDrive\Documents\wyrdroom-rebrand.md`. 
 - Rooms rename: Main Room → Main Hall, Project Room → War Room, Makers Space → The Forge, Vision Space → The Loom (with Norse-vibe descriptions)
 - localStorage keys: `apoc_*` → `wyrd_*` across sidebar width, messages, token budgets, vault key, sound settings. Decision: **no migration** — fresh start, v0, no production users
 - System messages: each agent gets a unique Elder Futhark rune flanking their enter/exit notice (map in rebrand doc PART 2)
-- Agent system prompts: all 11 agents + `_template.ts` + `profiles.ts` reference "APOC chat room" → "the Wyrdroom"
+- Agent system prompts: all 11 agents + `_template.ts` + `profiles.ts` reference "Wyrdroom chat room" → "the Wyrdroom"
 - Worker CORS: replace `endsWith('.apoc.pages.dev')` with exact-host check for `wyrdroom.com` (coordinate with P0 origin validation work — don't ship loose `endsWith` under the new name)
 - Note filenames: `apoc-${slug}...` → `wyrd-${slug}...`
-- Scribe vault folder: already writes to `APOC/Scribe Notes/` (per recent commit b09eafc) — rename to `Wyrdroom/Scribe Notes/`
+- Scribe vault folder: already writes to `Wyrdroom/Scribe Notes/` (per recent commit b09eafc) — rename to `Wyrdroom/Scribe Notes/`
 
 **Deferred / separate track**
 
@@ -589,7 +589,7 @@ Full rename tracked in `C:\Users\Clyle\OneDrive\Documents\wyrdroom-rebrand.md`. 
 - discussion queue visualization
 - deterministic orchestration templates
 
-### Epic 3. APOC as a Work Product Tool
+### Epic 3. Wyrdroom as a Work Product Tool
 
 - structured outputs
 - pinned briefs
@@ -619,7 +619,7 @@ Full rename tracked in `C:\Users\Clyle\OneDrive\Documents\wyrdroom-rebrand.md`. 
 - mention autocomplete
 - message-level actions
 
-### Shipment 3. APOC as a Workflow Tool
+### Shipment 3. Wyrdroom as a Workflow Tool
 
 - pinned session brief
 - structured output modes for Scribe

@@ -1,4 +1,7 @@
-# APOC Session Log
+# Wyrdroom Session Log
+
+> Historical entries below were written under the APOC brand and are
+> preserved as-is.
 
 ## 2026-04-10 — Shipment 2 Phase 1: Worker Hardening
 

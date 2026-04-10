@@ -25,7 +25,7 @@ function generateId(): string {
 }
 
 function storageKey(roomId: string): string {
-  return `apoc_messages_${roomId}`;
+  return `wyrd_messages_${roomId}`;
 }
 
 function loadMessages(roomId: string): Message[] {
@@ -43,6 +43,23 @@ function saveMessages(roomId: string, messages: Message[]): void {
   localStorage.setItem(storageKey(roomId), JSON.stringify(toSave));
 }
 
+// Elder Futhark rune flanking the entry/exit notices for each agent.
+// One rune per agent — see PART 2 of the Wyrdroom rebrand doc for the
+// meaning assigned to each.
+const AGENT_RUNES: Record<string, string> = {
+  gemma: 'ᚷ',   // Gebo — gift, generosity
+  mistral: 'ᛗ', // Mannaz — man, humanity
+  scribe: 'ᛊ',  // Sowilo — sun, clarity
+  cipher: 'ᚲ',  // Kenaz — torch, knowledge
+  oracle: 'ᛟ',  // Othala — heritage, ancestral land
+  jinx: 'ᛃ',    // Jera — harvest, year
+  sage: 'ᛋ',    // Sigel — wisdom (variant of sun rune)
+  flux: 'ᛚ',    // Laguz — water, flow
+  drift: 'ᛞ',   // Dagaz — day, dawn
+  patch: 'ᛈ',   // Pertho — mystery
+  echo: 'ᛖ',    // Ehwaz — horse
+};
+
 // Pure: builds the entry-message list for a room. Callers are responsible
 // for any side effects like sound playback (see playEntrySounds below) so
 // this can safely run inside a React state initializer under StrictMode.
@@ -53,13 +70,16 @@ function createEntryMessages(roomId: string): Message[] {
     .map((agentId) => {
       const agent = agents.find((a) => a.id === agentId);
       if (!agent) return null;
+      const rune = AGENT_RUNES[agent.id] || '';
+      const flank = rune ? `${rune} ` : '';
+      const trail = rune ? ` ${rune}` : '';
       return {
         id: generateId(),
         senderId: 'system',
         senderName: 'System',
         senderColor: '#5a6a4a',
         avatarUrl: '',
-        content: `${agent.name} has entered the room`,
+        content: `${flank}${agent.name} has entered the hall${trail}`,
         timestamp: Date.now(),
         type: 'system' as const,
         roomId,

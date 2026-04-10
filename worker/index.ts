@@ -11,11 +11,11 @@ export interface Env {
 // ---- Origin validation (SEC-02) ----------------------------------------
 //
 // The previous implementation matched origins with `startsWith` and
-// `endsWith` against the raw header string, which allows suffix attacks
-// like `https://apoc.pages.dev.evil.example`. This version parses the
-// header into a URL and compares the structured `hostname` component
-// (which the parser normalizes) against an exact allow-list plus a
-// whitelisted set of parent domains that accept any subdomain.
+// `endsWith` against the raw header string, which allowed suffix attacks
+// like `https://<legit>.evil.example`. This version parses the header
+// into a URL and compares the structured `hostname` component (which
+// the parser normalizes) against an exact allow-list plus a whitelisted
+// set of parent domains that accept any subdomain.
 
 const EXACT_ALLOWED_ORIGINS = new Set<string>([
   // Local dev
@@ -25,20 +25,24 @@ const EXACT_ALLOWED_ORIGINS = new Set<string>([
   'http://127.0.0.1:5173',
   'http://127.0.0.1:5174',
   'http://127.0.0.1:4173',
-  // Current production (APOC brand)
-  'https://apoc.pages.dev',
-  // Future production (Wyrdroom rebrand — Phase 2/3 of Shipment 2)
+  // Wyrdroom production (current target)
   'https://wyrdroom.com',
   'https://www.wyrdroom.com',
+  // Legacy APOC production — kept during the rebrand transition so the
+  // old pages.dev URL keeps working until the Cloudflare Pages custom
+  // domain cutover. Can be removed once production traffic has moved
+  // entirely to wyrdroom.com.
+  'https://apoc.pages.dev',
 ]);
 
 // Parent hostnames whose subdomains are allowed. Subdomain matching uses
 // the structured URL hostname (not the raw origin string), which is
 // immune to suffix injection.
 const ALLOWED_PARENT_HOSTNAMES = [
-  'apoc.pages.dev',
-  'wyrdroom.pages.dev',
   'wyrdroom.com',
+  'wyrdroom.pages.dev',
+  // Legacy — remove after the Cloudflare Pages custom domain cutover.
+  'apoc.pages.dev',
 ];
 
 function isOriginAllowed(rawOrigin: string): boolean {
@@ -63,7 +67,7 @@ function isOriginAllowed(rawOrigin: string): boolean {
   }
 
   // Rebuild canonical origin from the parsed URL so we compare apples
-  // to apples ("https://apoc.pages.dev" not "https://apoc.pages.dev/").
+  // to apples ("https://wyrdroom.com" not "https://wyrdroom.com/").
   const canonical = `${parsed.protocol}//${parsed.host}`;
   if (EXACT_ALLOWED_ORIGINS.has(canonical)) return true;
 
@@ -250,8 +254,8 @@ export default {
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${env.OPENROUTER_API_KEY}`,
-            'HTTP-Referer': 'https://apoc.pages.dev',
-            'X-Title': 'APOC Chat Room',
+            'HTTP-Referer': 'https://wyrdroom.com',
+            'X-Title': 'Wyrdroom',
           },
           body: JSON.stringify(body),
         });

@@ -14,7 +14,7 @@ function getBudget(agentId: string): TokenBudget {
   if (existing) return existing;
 
   // Check localStorage for daily persistence
-  const storageKey = `apoc_budget_${agentId}_${getDayKey()}`;
+  const storageKey = `wyrd_budget_${agentId}_${getDayKey()}`;
   const stored = localStorage.getItem(storageKey);
   if (stored) {
     const parsed: TokenBudget = JSON.parse(stored);
@@ -34,7 +34,7 @@ function getBudget(agentId: string): TokenBudget {
 }
 
 function persist(budget: TokenBudget): void {
-  const storageKey = `apoc_budget_${budget.agentId}_${getDayKey()}`;
+  const storageKey = `wyrd_budget_${budget.agentId}_${getDayKey()}`;
   localStorage.setItem(storageKey, JSON.stringify(budget));
 }
 
