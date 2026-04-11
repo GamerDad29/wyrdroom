@@ -3,6 +3,98 @@
 > Historical entries below were written under the APOC brand and are
 > preserved as-is.
 
+## 2026-04-10 — 🔥 Shipment 2.5 + 2.6 (back-to-back, same session)
+
+### Shipment 2.5: Vibe Change (commit `963c52c`)
+Finished the visual half of the Wyrdroom rebrand that Phase 2 had
+left unfinished. The functional rebrand (names, runes, storage keys)
+had landed but the Vault-Tec palette was still in place — live site
+was rendering cold navy/steel under Wyrdroom branding.
+
+Fix: single-pass rewrite of `src/styles/chatroom.css` with the full
+Mead & Modem palette and all 15 changes from
+`wyrdroom-visual-rebrand.md`. Also fixed two residual hardcoded cold
+colors in `src/components/AnimatedAvatar.tsx` (SVG background and
+Christopher's cape), and updated a stale "Vault-Tec" comment in
+`soundService.ts`.
+
+Runtime verified on `https://wyrdroom.com` via Playwright:
+- `body` background: `rgb(26, 21, 16)` (warm brown) ✅
+- Send button: honey gold linear gradient ✅
+- Online status dots: moss green `#7a9a5a` ✅
+- Zero console errors
+
+### Shipment 2.6: Agent Overhaul v2 (commit `ac1494a`)
+Full roster rebuild from `wyrdroom-agent-overhaul.md` executing all
+12 steps in the doc's execution order.
+
+**Roster change:** 11 → 8 agents.
+- Cut: Echo, Flux, Drift, Patch (narrators, not participants)
+- Added: Scout (DeepSeek R1, trend scouting, burnt-orange #e07030)
+- Kept: Gemma, Mistral, Cipher, Oracle, Scribe, Jinx, Sage
+
+**Model upgrades:** Mistral → Claude Haiku 4.5; Cipher → DeepSeek
+V3.2; Oracle → Gemini 3 Flash (1M context); Scribe → GPT-4o Mini;
+Sage → Claude Haiku 4.5; Jinx → Gemma 4 26B A4B. Scout new on
+DeepSeek R1. Gemma unchanged.
+
+**Prompt rules:** Every remaining agent got three additions:
+1. "No roll call" anti-pattern (don't auto-greet)
+2. "No citation chain" anti-pattern (don't open with "[Agent] says…")
+3. "Specific observations" rule (ground analysis in concrete elements)
+
+Plus a "How the hall works" section per agent with generic team
+framing and a per-agent coordinator block (Gemma frames + routes,
+Mistral speaks after foundation, Cipher is technical reality check,
+Oracle owns depth, Scribe stays quiet, Jinx short bursts, Sage
+speaks last, Scout owns recency).
+
+Plus hard response length targets per agent (Gemma 2-4/6, Mistral
+1-3/4, Cipher 1-2/4, Oracle 3-6/8, Scribe matches task, Jinx 1-2/3
+absolute, Sage 1-3/3, Scout 2-5/8).
+
+**Scout rune:** ᚱ Raidho — journey, travel, the ride. Added to the
+`AGENT_RUNES` map in `useChat.ts`.
+
+**Files touched (21 files):**
+- Created: `src/agents/scout.ts`
+- Deleted: `src/agents/echo.ts`, `flux.ts`, `drift.ts`, `patch.ts`
+- Updated: 7 remaining agent prompts
+- Updated: `agents/index.ts`, `manifest.ts`, `profiles.ts`,
+  `rooms.ts`, `useChat.ts`, `AnimatedAvatar.tsx`, `commandService.ts`,
+  `commandService.test.ts`, `worker.test.ts`
+
+**Live verification (Playwright + direct curl):**
+- `https://wyrdroom-proxy.gamerdad29.workers.dev/api/models`
+  reports exactly the 8-agent roster with the new model IDs end
+  to end
+- Front-end at `https://wyrdroom.com` shows 8 runes, 8 entry
+  messages, 8 agents in sidebar (+ Christopher)
+- Scout's `ᚱ Scout has entered the hall ᚱ` present
+- Echo, Flux, Drift, Patch completely gone from the UI
+- Zero console errors
+
+**Tests:** 35/35 passing on both shipments. Bundle size dropped
+352 kB → 341 kB after removing 4 agents' worth of system prompts.
+
+### Note on Patch
+The overhaul doc's Part 1 only mentioned Echo/Flux/Drift as cuts,
+but the Part 2 roster table, the Part 6 rooms config, the Part 7
+worker model list, and the execution checklist at the bottom all
+showed exactly 8 agents with Patch NOT in the list. Patch was cut
+to honor the explicit "8 agents total" checklist requirement. If
+this was accidental, the Patch files can be restored from git
+history (`src/agents/patch.ts` at commit `963c52c` or earlier).
+
+### Note on GitHub Actions workflow
+`.github/workflows/deploy.yml` is already pointing at
+`wyrdroom-proxy` and has `VITE_PROXY_SECRET` removed (done in
+Shipment 2 Phase 3). The workflow secret `VITE_PROXY_SECRET` in
+GitHub repo Settings is dangling — safe to delete at leisure since
+nothing references it anymore.
+
+### Shipment 2.5 + 2.6 both complete and deployed to production.
+
 ## 2026-04-10 — 🪐 Shipment 2 Phase 3: Infra cutover + cleanup (COMPLETE)
 
 ### Accomplished

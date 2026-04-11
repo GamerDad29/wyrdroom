@@ -3,6 +3,122 @@
 > Historical entries below were written under the APOC brand and are
 > preserved as-is. The project was renamed to Wyrdroom on 2026-04-10.
 
+## 2026-04-10 — 🔥 Shipment 2.6: Agent Overhaul v2
+
+Full roster rebuild, 5 model upgrades, collaboration rules baked into
+every remaining agent prompt. Commit `ac1494a` on main, deployed live.
+
+### Roster (11 → 8)
+
+**Cut:** Echo, Flux, Drift, Patch. They were narrators and meta-
+commentators rather than participants with distinct expertise.
+
+**New:** Scout (DeepSeek R1). The room's antenna to the outside world.
+Tracks what just shipped, who's using it, whether it's hype or signal.
+Thinks in landscapes. Owns breadth and recency; Oracle owns depth.
+
+**Kept:** Gemma, Mistral, Cipher, Oracle, Scribe, Jinx, Sage.
+
+### Model upgrades
+
+| Agent | Old | New |
+|---|---|---|
+| Mistral | GLM 4.7 Flash | Claude Haiku 4.5 |
+| Cipher | Qwen3 Coder Next | DeepSeek V3.2 |
+| Oracle | Gemma 4 26B | Gemini 3 Flash (1M context) |
+| Scribe | Nemotron 3 Nano (free) | GPT-4o Mini |
+| Sage | Gemma 4 26B | Claude Haiku 4.5 |
+| Scout | (new) | DeepSeek R1 |
+| Jinx | Step 3.5 Flash | Gemma 4 26B A4B |
+
+### Prompt rules in every remaining agent
+
+- **No roll call** — don't auto-greet when Christopher says "hi all"
+  unless you're one of the first two to speak
+- **No citation chain** — don't open with "[Agent] says X, but…"
+- **Specific observations** — when analyzing a URL/doc/code, ground
+  in concrete elements
+- **Collaboration model** — each agent has a per-agent coordinator
+  block defining their lane and how they work with the others
+- **Response length targets** — hard per-agent limits (Gemma 2-4/6,
+  Mistral 1-3/4, Cipher 1-2/4, Oracle 3-6/8, Scribe matches task,
+  Jinx 1-2/3, Sage 1-3/3, Scout 2-5/8)
+
+### New Scout rune
+
+ᚱ (Raidho — journey, travel, the ride). Added to `AGENT_RUNES` in
+`src/hooks/useChat.ts`. Entry message: `[ ᚱ Scout has entered the
+hall ᚱ ]`.
+
+### Tests
+- 35/35 still passing
+- `/api/models` test now pins the 8-agent roster and explicitly
+  asserts Scout is present, Echo/Flux/Drift/Patch absent
+- `commandService` `@scout` parsing test replaces old `@echo` test
+- Manifest consistency test auto-pins the new roster
+- Clean tsc, clean build (bundle dropped 352 kB → 341 kB because
+  4 system prompts are gone)
+
+### Live verification (Playwright against https://wyrdroom.com)
+- `/api/models` reports exactly 8 agents with the new model IDs
+- All 8 entry messages with runes including Scout's ᚱ
+- Sidebar shows 8 agents + Christopher, Scout present with burnt-
+  orange `#e07030` avatar
+- Zero console errors
+
+## 2026-04-10 — 🔥 Shipment 2.5: Vibe Change (Mead & Modem visual rebrand)
+
+Finished the visual half of the Wyrdroom rebrand that Phase 2 left
+incomplete. Phase 2 flipped names, runes, and copy but left the
+Vault-Tec Fallout palette intact — the site was rendering cold
+navy/steel under Wyrdroom branding. This swaps the skin to Mead &
+Modem: warm wood, honey gold, moss green, parchment, hearthfire.
+
+Commit `963c52c` on main, deployed live.
+
+### 15 concrete changes in `src/styles/chatroom.css`
+
+1. Replaced the entire `:root` variable block with the Mead & Modem
+   palette. Every token now resolves to warm tones. Added new
+   Wyrdroom-specific tokens: `--hearth-glow`, `--wood-grain`,
+   `--parchment`, `--moss`, `--moss-light`, `--rune-gold`.
+2. Removed the CRT scanline `#root::after` overlay entirely
+3. Replaced `#root::before` screen glow with subtle hearthfire
+4. Titlebar: flat warm brown (no gradient), wider amber shadow,
+   carved-edge bottom highlight
+5. Room tabs: `--hearth-glow` hover, warmed active glow
+6. Chat messages: warm brown panel with repeating 24px wood-grain
+   texture
+7. Code blocks: honey gold on dark (was terminal green)
+8. System message bracket color: `--rune-gold`
+9. Action messages: warm parchment italic at 70% opacity
+10. Avatar `image-rendering: pixelated` rules for future PNG sprites
+11. Input bar: warm dark, inset carved shadow, amber focus; send
+    button honey-gold gradient (was military green)
+12. Sidebar: warm background, hearth-glow hover, moss-green online
+    status dots
+13. Modal: warm box-shadow, removed avatar scanline overlay
+14. Typing dot bounce softened 4px → 3px
+15. Streaming cursor unchanged (already warm amber)
+
+### Residual cleanup
+- `src/components/AnimatedAvatar.tsx`: SVG background `#0d0f14` →
+  `#1a1510`; Christopher's cape `#3B6BA5`/`#2a4a75` (Vault-Tec blue)
+  → `#5a7a3a`/`#3d5220` (moss)
+- `src/services/soundService.ts`: "Vault-Tec attention chime"
+  comment → "Hall-call attention chime"
+
+### Verification (Playwright, fresh browser context on live site)
+- `body` computed background: `rgb(26, 21, 16)` = `#1a1510` ✅
+- `--bg-deep` CSS var: `#1a1510` ✅
+- Send button: `linear-gradient(rgb(139, 105, 20), rgb(107, 80, 16))`
+  — honey gold, not green ✅
+- Online status dot: `rgb(122, 154, 90)` = `#7a9a5a` moss ✅
+- Zero console errors
+
+Layout, components, fonts, animations, responsive breakpoints, and
+all functionality are identical. Same bones, different clothes.
+
 ## 2026-04-10 — 🪐 Shipment 2 COMPLETE: Wyrdroom is live
 
 Production is running on `https://wyrdroom.com` with the new worker,

@@ -108,77 +108,55 @@ commit `1743353`)
   allow-list and tests; worker redeployed; `apoc.pages.dev` now
   returns 403 from the worker
 
-### 🔥 Shipment 2.5 — Vibe Change (Mead & Modem visual rebrand)
+### ✅ Shipment 2.5 — Vibe Change (shipped 2026-04-10)
 
-Source: `wyrdroom-visual-rebrand.md`
+Commit `963c52c` on main, deployed live. Full Mead & Modem visual
+reskin. Verified via Playwright on `https://wyrdroom.com` — `body`
+background is now `rgb(26, 21, 16)` (warm brown), send button is
+honey-gold gradient, online status dots are moss green.
 
-Scope: Pure CSS/visual reskin to finish what Phase 2 started. Phase 2
-changed names, runes, and copy but left the Vault-Tec Fallout palette
-intact — the site still renders in cold navy/steel under Wyrdroom
-branding. This shipment swaps the skin to Mead & Modem (warm wood,
-honey gold, moss green, parchment).
+Closed:
+- Mead & Modem palette swap (entire `:root` block)
+- CRT scanline overlay removed, replaced with hearthfire glow
+- Titlebar flat warm brown, wider amber shadow
+- Room tabs amber active + hearth-glow hover
+- Chat messages wood-grain texture
+- Code blocks honey gold, not terminal green
+- System message bracket → rune gold
+- Action messages parchment tone
+- Input bar warm dark + gold gradient send button
+- Sidebar warm + moss status dots
+- Modal warm box-shadow, avatar scanline removed
+- Typing dot bounce softened 4px → 3px
+- `image-rendering: pixelated` for future PNG sprites
+- Residual cleanup: Christopher's cape navy → moss, SVG bg warm,
+  soundService comment rebranded
 
-15 concrete changes in `src/styles/chatroom.css`:
-1. Replace the entire `:root` variable block with Mead & Modem palette
-2. Remove CRT scanline `#root::after` overlay
-3. Replace `#root::before` screen glow with hearthfire glow
-4. Titlebar flat warm brown, wider amber text-shadow
-5. Room tabs amber active indicator + hearth-glow hover
-6. Chat messages background: warm brown + wood-grain texture
-7. Code blocks: honey gold on dark instead of terminal green
-8. System message bracket color → gold
-9. Action messages → warmer parchment tone
-10. Avatar border treatment + `image-rendering: pixelated` prep
-11. Input bar warm tones, gold gradient send button (was green)
-12. Sidebar warm background, hearth-glow hover, moss green online dot
-13. Modal warm box-shadow, remove avatar scanline overlay
-14. Typing dot bounce 4px → 3px (gentler, flame-like)
-15. Streaming cursor unchanged (already warm amber)
+### ✅ Shipment 2.6 — Agent Overhaul v2 (shipped 2026-04-10)
 
-Layout, components, fonts, animations, responsive breakpoints, and all
-functionality stay identical. Same bones, different clothes.
+Commit `ac1494a` on main, deployed live. Verified via Playwright on
+`https://wyrdroom.com` — 8 entry runes, 8 sidebar agents, Scout's
+ᚱ Raidho present, Echo/Flux/Drift/Patch completely gone.
 
-### 🔥 Shipment 2.6 — Agent Overhaul v2
-
-Source: `wyrdroom-agent-overhaul.md`
-
-Scope: Full roster rebuild + model upgrades + collaboration rules.
-
-**Roster changes (11 → 8 agents):**
-- **Cut:** Echo, Flux, Drift (narrators instead of participants)
-- **Add:** Scout — AI/tech research, trend scouting, DeepSeek R1
-- **Kept:** Gemma, Mistral, Cipher, Oracle, Scribe, Jinx, Sage
-
-**Model upgrades:**
-| Agent | Old → New |
-|---|---|
-| Mistral | GLM 4.7 Flash → `anthropic/claude-haiku-4-5` |
-| Cipher | Qwen3 Coder Next → `deepseek/deepseek-chat` (V3.2) |
-| Oracle | Gemma 4 26B → `google/gemini-3-flash` (1M context) |
-| Scribe | Nemotron 3 Nano → `openai/gpt-4o-mini` |
-| Sage | Gemma 4 26B → `anthropic/claude-haiku-4-5` |
-| Scout | NEW → `deepseek/deepseek-reasoner` (R1) |
-| Gemma | unchanged |
-| Jinx | unchanged (Gemma 4 26B A4B MoE) |
-
-**Prompt rules baked into every remaining agent:**
-- **No roll call** — don't auto-greet when Christopher says "hi all"
-- **No citation chain** — don't open with "[Agent] says X, but..."
-- **Response length targets** — per-agent hard limits (see Part 4)
-- **Specific observations** — when analyzing a URL/doc/code, ground
-  in concrete elements, not abstract commentary
-- **Collaboration model** — you're a team with complementary roles,
-  not independent respondents
-- **Per-agent coordination instructions** — Gemma frames + routes,
-  Mistral speaks after foundation is laid, Sage speaks last or not
-  at all, etc.
-
-**New rune for Scout:** ᚱ (Raidho — journey, travel)
-
-**Worker impact:** The `/api/models` endpoint is derived from the
-shared agent manifest (BUG-05 closed in Shipment 2 Phase 1), so it
-automatically reflects the new roster once `src/agents/manifest.ts`
-is updated. Manifest consistency test will catch any drift.
+Closed:
+- Roster: 11 → 8. Cut Echo, Flux, Drift, Patch. Added Scout
+  (DeepSeek R1, burnt-orange `#e07030`)
+- Model upgrades: Mistral → Claude Haiku 4.5, Cipher → DeepSeek
+  V3.2, Oracle → Gemini 3 Flash (1M context), Scribe → GPT-4o
+  Mini, Sage → Claude Haiku 4.5, Jinx → Gemma 4 26B A4B
+- "How the hall works" collaboration block in every remaining
+  agent prompt with per-agent coordinator role
+- Anti-patterns in every prompt: no roll call, no citation chain,
+  specific observations
+- Response length targets per agent (hard limits)
+- New rune: ᚱ Raidho for Scout
+- `agents/manifest.ts`, `rooms.ts`, `profiles.ts`, `useChat.ts`
+  rune map, `AnimatedAvatar.tsx` COLORS, `commandService.ts`
+  /help text — all updated to the new 8-agent roster
+- `worker/index.ts` `/api/models` auto-reflects the new roster via
+  the shared manifest; worker redeployed
+- `worker.test.ts` and `commandService.test.ts` updated; 35/35
+  tests passing
 
 ### ⏳ Shipment 3 — Usability
 Open: FEAT-01, FEAT-02, FEAT-04, FEAT-05, FEAT-11, VAULT-01
