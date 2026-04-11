@@ -3,6 +3,119 @@
 > Historical entries below were written under the APOC brand and are
 > preserved as-is.
 
+## 2026-04-10 — 🌙 Session close-out (end of day)
+
+Monster session. Going to bed.
+
+### What shipped today (in order)
+1. **Shipment 1** — Trust the Runtime (XSS fix, real /stop
+   cancellation, concurrent streaming state, /save structured
+   intent, truthful connectivity, pure state initializer, sidebar
+   resize, 19 tests). Commits `82dc2a0` → `3e266bf`, plus gitignore
+   housekeeping `da8f4e9`. Pushed + smoke-tested in Playwright.
+2. **Shipment 2 Phase 1** — Worker Hardening (strict origin
+   validation, removed bundled proxy secret, per-IP rate limiter,
+   /api/models derived from shared manifest, +16 tests to 34/34).
+   Commits `c82400d` + `c25e74a`.
+3. **Shipment 2 Phase 2** — Wyrdroom rebrand code on
+   `wyrdroom-rebrand` branch (names, runes, storage keys,
+   package.json, agents prompts, rooms, CI workflow). Commits
+   `5c70060`, `57aad29` (POLISH-01 Noto Sans Runic), `2e2731c`.
+4. **Shipment 2 Phase 3** — Infra cutover (executed end-to-end via
+   Cloudflare MCP, wrangler, and the Cloudflare REST API using the
+   wrangler OAuth token): deployed `wyrdroom-proxy`, set the
+   OPENROUTER_API_KEY secret, deleted old `apoc-proxy`, attached
+   `wyrdroom.com` + `www.wyrdroom.com` custom domains, updated
+   Pages env vars, merged to main, christopher added the DNS
+   CNAMEs via dashboard, site went live. Merge commit `c57a013`,
+   docs close-out `dfe8633`, cleanup commit `1743353` that retired
+   the legacy `apoc.pages.dev` allow-list entries.
+5. **Shipment 2.5** — Mead & Modem visual rebrand. The full CSS
+   palette swap I had missed in Phase 2 (the site was running cold
+   navy/steel under Wyrdroom branding). Single-pass rewrite of
+   `src/styles/chatroom.css` with all 15 changes, plus residual
+   cleanup of `AnimatedAvatar.tsx` and `soundService.ts`. Commit
+   `963c52c`. Verified live via Playwright.
+6. **Shipment 2.6** — Agent Overhaul v2. Roster trimmed 11 → 8
+   (cut Echo, Flux, Drift, Patch; added Scout on DeepSeek R1).
+   Five model upgrades (Mistral/Sage → Claude Haiku 4.5, Cipher →
+   DeepSeek V3.2, Oracle → Gemini 3 Flash, Scribe → GPT-4o Mini,
+   Jinx → Gemma 4 26B A4B). Collaboration rules, response length
+   targets, anti-patterns baked into every remaining agent prompt.
+   New rune ᚱ Raidho for Scout. 21 files changed. Commit
+   `ac1494a`. Docs close-out `abf0bda`. Verified live via
+   Playwright + direct curl against `/api/models`.
+
+### Commits pushed to `origin/main` today
+17 commits, running tally from this morning:
+```
+abf0bda  docs: close out Shipment 2.5 and 2.6
+ac1494a  rebrand(agents): full roster overhaul v2 (Shipment 2.6)
+963c52c  rebrand(visual): Mead & Modem (Shipment 2.5)
+dfe8633  docs: close out Shipment 2
+1743353  cleanup: retire legacy apoc.pages.dev allow-list entries
+c57a013  merge: Wyrdroom rebrand (Phase 2 + Phase 3)
+2e2731c  ci: point deploy workflow at wyrdroom-proxy
+57aad29  polish: Noto Sans Runic (POLISH-01)
+5c70060  rebrand: APOC → Wyrdroom
+9f03641  docs: log Phase 2
+c25e74a  docs: log Phase 1
+c82400d  fix(security): harden worker (Phase 1)
+da8f4e9  chore: gitignore tooling dirs
+3e266bf  docs: log Shipment 1
+a5e50e1  fix(chat): real cancellation (Shipment 1)
+bcb90c8  fix(security): sanitize markdown XSS (Shipment 1)
+82dc2a0  test: Vitest harness
+```
+
+### Backlog state going into next session
+- ✅ Shipment 1, 2, 2.5, 2.6 all shipped + verified live
+- ⏳ **Shipment 3** (Usability): FEAT-01 Room Control Panel,
+  FEAT-02 Pinned Session Brief, FEAT-04 Message-Level Actions,
+  FEAT-05 Mention autocomplete, FEAT-11 Presence upgrades,
+  VAULT-01 Vault hardening
+- ⏳ **REBRAND-05** Pixel-art sprites (discussed at session end,
+  chose to defer). Path forward: extend `AnimatedAvatar.tsx` with
+  per-agent Norse costume features (horned helm for Gemma,
+  hood+spectacles for Scribe, chest rune for Cipher, raven for
+  Oracle, wild hair for Jinx, long beard+staff for Sage, fur
+  hood+spyglass for Scout, feathered cap for Mistral). Procedural
+  SVG, not commissioned PNGs. Already wired through the app via
+  `image-rendering: pixelated` CSS rules from Shipment 2.5. Could
+  also still commission real PNGs later — the swap-in path is in
+  place.
+- ⏳ **Shipment 4** (Workflow Tool): REF-01 internal event model,
+  FEAT-03 structured Scribe artifacts, FEAT-06..10, FEAT-12,
+  FEAT-13, OPS-02
+- ⏳ **Dangling follow-up**: delete the stale `VITE_PROXY_SECRET`
+  secret from GitHub repo Settings (nothing references it anymore
+  after the Shipment 2 workflow cleanup)
+
+### Known issues / carry-over
+- `Patch` was cut in Shipment 2.6 to match the overhaul doc's
+  explicit 8-agent roster table. Part 1 of that doc only named
+  Echo/Flux/Drift as cuts, so this might have been accidental.
+  If needed, `src/agents/patch.ts` can be restored from commit
+  `963c52c` or earlier.
+- Per-isolate in-memory rate limiter (OPS-01) is still the v0
+  tier. KV/DO-backed limiter is deferred to Shipment 4.
+- Local folder is still `~/Downloads/apoc/`. Cosmetic only. Can
+  `mv` at the start of any future session (would kill that
+  session's working directory).
+- Bundle size dropped to 341 kB / 108 kB gzip (down from 352/112)
+  after retiring 4 agents' worth of system prompts.
+
+### Next session opener
+Recommended: start with a **real conversation test** of the new
+agent roster at `https://wyrdroom.com` to feel the upgrades (Claude
+Haiku 4.5 Mistral + Sage, DeepSeek V3.2 Cipher, Gemini 3 Flash
+Oracle with 1M context, GPT-4o Mini Scribe, DeepSeek R1 Scout).
+Budget: $0.10–0.50 of OpenRouter credit for a genuine 5–10 minute
+test. Then decide between Shipment 3 features or the Norse sprite
+upgrade.
+
+---
+
 ## 2026-04-10 — 🔥 Shipment 2.5 + 2.6 (back-to-back, same session)
 
 ### Shipment 2.5: Vibe Change (commit `963c52c`)
