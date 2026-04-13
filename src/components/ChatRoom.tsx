@@ -13,9 +13,10 @@ import AgentProfileModal from './AgentProfileModal';
 import RoomControlPanel from './RoomControlPanel';
 import SessionBriefPanel from './SessionBriefPanel';
 import PinnedMessagesPanel from './PinnedMessagesPanel';
+import AdvancedSettingsPanel from './AdvancedSettingsPanel';
 import { agentProfiles } from '../agents/profiles';
 import { isSoundEnabled, toggleSound } from '../services/soundService';
-import { DiscussionMode, Message } from '../types';
+import { DiscussionMode, HallSettings, Message } from '../types';
 
 type SkyMood = 'dawn' | 'day' | 'dusk' | 'night';
 type WeatherMood = 'clear' | 'mist' | 'rain' | 'storm';
@@ -38,6 +39,38 @@ function deriveWeatherMood(date: Date): WeatherMood {
 }
 
 export default function ChatRoom() {
+  function settingsStorageKey(roomId: string) {
+    return `wyrd_settings_${roomId}`;
+  }
+
+  function loadHallSettings(roomId: string): HallSettings {
+    try {
+      const stored = localStorage.getItem(settingsStorageKey(roomId));
+      if (stored) {
+        return {
+          alternateTranscript: false,
+          reactiveInterplay: true,
+          conversationCadence: 'measured',
+          ...(JSON.parse(stored) as Partial<HallSettings>),
+        };
+      }
+    } catch {
+      // ignore
+    }
+    return {
+      alternateTranscript: false,
+      reactiveInterplay: true,
+      conversationCadence: 'measured',
+    };
+  }
+
+  const [hallSettingsByRoom, setHallSettingsByRoom] = useState<Record<string, HallSettings>>(() => ({
+    main: loadHallSettings('main'),
+    project: loadHallSettings('project'),
+    makers: loadHallSettings('makers'),
+    vision: loadHallSettings('vision'),
+  }));
+
   const {
     messages,
     pinnedMessages,
@@ -55,7 +88,7 @@ export default function ChatRoom() {
     setSessionBrief,
     togglePinnedMessage,
     captureMessageToScribe,
-  } = useChat();
+  } = useChat(hallSettingsByRoom);
 
   const { getExpression, onMessage, onTyping, onStopTyping } = useExpressions();
 
@@ -84,12 +117,28 @@ export default function ChatRoom() {
   const isDragging = useRef(false);
 
   const activeRoom = rooms.find((r) => r.id === activeRoomId);
+  const activeHallSettings = hallSettingsByRoom[activeRoomId];
   const discussionAgents = (activeRoom?.agents || []).filter((agentId) => agentId !== 'scribe');
   const [selectedDiscussionAgents, setSelectedDiscussionAgents] = useState<string[]>(discussionAgents);
+  const alternatingMap = useMemo(() => {
+    let conversationalIndex = 0;
+    return messages.map((message) => {
+      if (message.type === 'system' || message.type === 'action') {
+        return false;
+      }
+      const alternate = Boolean(activeHallSettings?.alternateTranscript) && conversationalIndex % 2 === 1;
+      conversationalIndex += 1;
+      return alternate;
+    });
+  }, [messages, activeHallSettings]);
 
   useEffect(() => {
     setSelectedDiscussionAgents(discussionAgents);
   }, [activeRoomId]);
+
+  useEffect(() => {
+    localStorage.setItem(settingsStorageKey(activeRoomId), JSON.stringify(activeHallSettings));
+  }, [activeRoomId, activeHallSettings]);
 
   useEffect(() => {
     function refreshAtmosphere() {
@@ -288,7 +337,7 @@ export default function ChatRoom() {
             ref={chatRef}
             onScroll={handleScroll}
           >
-            {messages.map((msg) => {
+            {messages.map((msg, index) => {
               if (msg.type === 'system') {
                 return <SystemMessage key={msg.id} text={msg.content} />;
               }
@@ -303,6 +352,7 @@ export default function ChatRoom() {
                 <MessageBubble
                   key={msg.id}
                   message={msg}
+                  alternateLayout={alternatingMap[index]}
                   searchQuery={searchMatches.has(msg.id) ? searchQuery : undefined}
                   onClickAgent={handleClickAgent}
                   expression={msg.type === 'agent' ? getExpression(msg.senderId) : undefined}
@@ -361,6 +411,16 @@ export default function ChatRoom() {
               </button>
             </div>
             <div className="advanced-modal-body">
+              <AdvancedSettingsPanel
+                settings={activeHallSettings}
+                onChange={(nextSettings) => {
+                  setHallSettingsByRoom((prev) => ({
+                    ...prev,
+                    [activeRoomId]: nextSettings,
+                  }));
+                }}
+              />
+
               <RoomControlPanel
                 mode={discussionMode}
                 topic={discussionTopic}

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { ActiveDiscussion, DiscussionConfig, DiscussionMode, Message, SessionBrief, UserInfo } from '../types';
+import { ActiveDiscussion, DiscussionConfig, DiscussionMode, HallSettings, Message, SessionBrief, UserInfo } from '../types';
 import { agents, getAgent } from '../agents';
 import { rooms } from '../services/rooms';
 import { sendMessageToAgent } from '../services/chatService';
@@ -80,6 +80,21 @@ function buildBriefContext(roomName: string, brief: SessionBrief): string | unde
   return `Pinned session brief for ${roomName}:\n${lines.join('\n')}\nUse this as the current working context unless Christopher clearly changes direction.`;
 }
 
+function buildSettingsContext(settings?: HallSettings): string | undefined {
+  if (!settings) return undefined;
+
+  const lines = [
+    settings.reactiveInterplay
+      ? 'Interaction mode: reactive. Build directly on other agents, challenge weak points, and make the hall feel conversational.'
+      : 'Interaction mode: direct. Prioritize answering Christopher over side-conversation.',
+    settings.conversationCadence === 'lively'
+      ? 'Cadence: lively. Keep replies punchy, faster-moving, and more willing to volley with the room.'
+      : 'Cadence: measured. Keep replies deliberate, calmer, and lower-frequency.',
+  ];
+
+  return `Hall behavior settings:\n${lines.join('\n')}`;
+}
+
 // Elder Futhark rune flanking the entry/exit notices for each active agent.
 const AGENT_RUNES: Record<string, string> = {
   gemma: 'ᚷ',   // Gebo — gift, generosity
@@ -130,7 +145,7 @@ function playEntrySounds(roomId: string): void {
   }
 }
 
-export function useChat() {
+export function useChat(settingsByRoom?: Record<string, HallSettings>) {
   const [activeRoomId, setActiveRoomId] = useState('main');
   // Track which rooms were freshly seeded (no saved history) so we can play
   // their entry sounds from an effect rather than the state initializer.
@@ -312,8 +327,12 @@ export function useChat() {
   const getRoomContext = useCallback((roomId: string): string | undefined => {
     const room = rooms.find((candidate) => candidate.id === roomId);
     if (!room) return undefined;
-    return buildBriefContext(room.name, sessionBriefs[roomId] || EMPTY_BRIEF);
-  }, [sessionBriefs]);
+    const contextParts = [
+      buildBriefContext(room.name, sessionBriefs[roomId] || EMPTY_BRIEF),
+      buildSettingsContext(settingsByRoom?.[roomId]),
+    ].filter(Boolean);
+    return contextParts.length > 0 ? contextParts.join('\n\n') : undefined;
+  }, [sessionBriefs, settingsByRoom]);
 
   // Send to a single agent and get streaming response.
   //
@@ -606,15 +625,17 @@ export function useChat() {
     if (respondingAgents.length === 0) return;
 
     playHeyAll();
+    const roomSettings = settingsByRoom?.[roomId];
+    const stagger = roomSettings?.conversationCadence === 'lively' ? 420 : 800;
 
     sendToAgentPromise(respondingAgents[0], allMessages, roomId).then(() => {
       for (let i = 1; i < respondingAgents.length; i++) {
         setTimeout(() => {
           sendToAgentPromise(respondingAgents[i], allMessages, roomId);
-        }, i * 800);
+        }, i * stagger);
       }
     });
-  }, [sendToAgentPromise]);
+  }, [sendToAgentPromise, settingsByRoom]);
 
   // Idle chatter: agents occasionally talk when user is quiet
   // Capped at 1 idle message per 5 minutes, max 3 per session
@@ -848,6 +869,7 @@ export function useChat() {
     remainingMinutes: number,
     latestMessages: Message[],
     turnCount: number,
+    settings?: HallSettings,
   ) => {
     const previousSpeakers = latestMessages
       .slice(-8)
@@ -866,22 +888,22 @@ export function useChat() {
         'What has NOT been said yet that should be? Fill the gap. 1-2 sentences.',
         'Compliment another agent on a specific point they made. Then add a twist. 2 sentences.',
       ];
-      return prompts[Math.min(turnCount, prompts.length - 1)];
+      return `${prompts[Math.min(turnCount, prompts.length - 1)]}${settings?.reactiveInterplay ? ' Make the reaction feel like a real back-and-forth, not isolated monologues.' : ''}`;
     }
 
     if (mode === 'brainstorm') {
-      return `BRAINSTORM: "${topic}" (${remainingMinutes}min left). ${lastSpeaker} just spoke. Add one fresh angle, concrete example, or unexpected option. Do NOT repeat prior ideas. 2-3 sentences max.`;
+      return `BRAINSTORM: "${topic}" (${remainingMinutes}min left). ${lastSpeaker} just spoke. Add one fresh angle, concrete example, or unexpected option. Do NOT repeat prior ideas.${settings?.reactiveInterplay ? ' Explicitly hook into what another agent just said.' : ''} 2-3 sentences max.`;
     }
 
     if (mode === 'critique') {
-      return `CRITIQUE: "${topic}" (${remainingMinutes}min left). ${lastSpeaker} just spoke. Stress-test the idea: name a risk, hidden assumption, or likely failure mode, then offer one corrective move. 2-3 sentences max.`;
+      return `CRITIQUE: "${topic}" (${remainingMinutes}min left). ${lastSpeaker} just spoke. Stress-test the idea: name a risk, hidden assumption, or likely failure mode, then offer one corrective move.${settings?.reactiveInterplay ? ' Push directly against a specific earlier point.' : ''} 2-3 sentences max.`;
     }
 
     if (mode === 'synthesis') {
-      return `SYNTHESIS: "${topic}" (${remainingMinutes}min left). ${lastSpeaker} just spoke. Pull threads together. Name what the room seems to agree on, what still conflicts, and the best next move. 2-3 sentences max.`;
+      return `SYNTHESIS: "${topic}" (${remainingMinutes}min left). ${lastSpeaker} just spoke. Pull threads together. Name what the room seems to agree on, what still conflicts, and the best next move.${settings?.reactiveInterplay ? ' Name the conflicting agents or positions directly.' : ''} 2-3 sentences max.`;
     }
 
-    return `ROUND ROBIN: "${topic}" (${remainingMinutes}min left). ${lastSpeaker} just spoke. You MUST reference or build on something specific from the room. Add something new, not a restatement. 2-3 sentences max.`;
+    return `ROUND ROBIN: "${topic}" (${remainingMinutes}min left). ${lastSpeaker} just spoke. You MUST reference or build on something specific from the room. Add something new, not a restatement.${settings?.reactiveInterplay ? ' Use another agent\'s point as a live handoff or rebuttal.' : ''} 2-3 sentences max.`;
   }, []);
 
   const stopDiscussion = useCallback((message = 'Discussion stopped.') => {
@@ -960,25 +982,30 @@ export function useChat() {
       participantIndex += 1;
       const latestMessages = messagesByRoomRef.current[activeRoomId] || [];
       const remainingMinutes = Math.max(1, Math.ceil((config.durationMs - (Date.now() - startedAt)) / 60000));
+      const roomSettings = settingsByRoom?.[activeRoomId];
       const instruction = buildDiscussionInstruction(
         config.mode,
         config.topic,
         remainingMinutes,
         latestMessages,
         turnCount,
+        roomSettings,
       );
       turnCount += 1;
 
       await sendToAgentPromise(agent, latestMessages, activeRoomId, false, instruction);
 
       if (iterationRef.current.active) {
-        const pause = config.mode === 'freeform' ? 2500 + Math.random() * 1500 : 1800 + Math.random() * 700;
+        const lively = roomSettings?.conversationCadence === 'lively';
+        const pause = config.mode === 'freeform'
+          ? (lively ? 1200 : 2500) + Math.random() * (lively ? 900 : 1500)
+          : (lively ? 950 : 1800) + Math.random() * (lively ? 500 : 700);
         setTimeout(nextTurn, pause);
       }
     };
 
     nextTurn();
-  }, [activeRoomId, addSystemMessage, buildDiscussionInstruction, cancelAllRequests, sendToAgent, sendToAgentPromise, setRoomMessages]);
+  }, [activeRoomId, addSystemMessage, buildDiscussionInstruction, cancelAllRequests, sendToAgent, sendToAgentPromise, setRoomMessages, settingsByRoom]);
 
   const sendMessage = useCallback(
     (text: string) => {

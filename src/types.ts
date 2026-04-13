@@ -69,6 +69,14 @@ export interface SessionBrief {
   output: string;
 }
 
+export type ConversationCadence = 'measured' | 'lively';
+
+export interface HallSettings {
+  alternateTranscript: boolean;
+  reactiveInterplay: boolean;
+  conversationCadence: ConversationCadence;
+}
+
 export interface DiscussionConfig {
   mode: DiscussionMode;
   topic: string;

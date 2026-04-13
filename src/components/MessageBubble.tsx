@@ -5,6 +5,7 @@ import AnimatedAvatar from './AnimatedAvatar';
 interface Props {
   message: Message;
   searchQuery?: string;
+  alternateLayout?: boolean;
   onClickAgent?: (agentId: string) => void;
   expression?: Expression;
   onTogglePin?: (messageId: string) => void;
@@ -122,6 +123,7 @@ export function renderMessageContent(text: string, searchQuery?: string): Node[]
 export default function MessageBubble({
   message,
   searchQuery,
+  alternateLayout,
   onClickAgent,
   expression,
   onTogglePin,
@@ -136,7 +138,7 @@ export default function MessageBubble({
   const askTargets = availableAgents.filter((agent) => agent.id !== message.senderId && agent.id !== 'scribe');
 
   return (
-    <div className={`message ${searchQuery ? 'highlighted' : ''} ${message.pinned ? 'pinned' : ''}`}>
+    <div className={`message ${alternateLayout ? 'alternate-layout' : ''} ${searchQuery ? 'highlighted' : ''} ${message.pinned ? 'pinned' : ''}`}>
       {showAnimatedAvatar ? (
         <AnimatedAvatar
           agentId={message.senderId}

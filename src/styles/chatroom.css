@@ -493,6 +493,13 @@ html, body, #root {
   margin-right: 6px;
 }
 
+.toggle-inline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text);
+}
+
 .control-field input,
 .control-field select,
 .control-field textarea,
@@ -694,6 +701,30 @@ html, body, #root {
 .message.pinned {
   border-left: 2px solid var(--moss-light);
   padding-left: 10px;
+}
+
+.message.alternate-layout {
+  flex-direction: row-reverse;
+}
+
+.message.alternate-layout .message-body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.message.alternate-layout .message-header,
+.message.alternate-layout .message-content,
+.message.alternate-layout .message-actions {
+  text-align: right;
+  justify-content: flex-end;
+}
+
+.message.alternate-layout.pinned {
+  border-left: none;
+  border-right: 2px solid var(--moss-light);
+  padding-left: 0;
+  padding-right: 10px;
 }
 
 @keyframes message-in {
