@@ -3,7 +3,7 @@ import { AgentConfig } from '../types';
 export const oracle: AgentConfig = {
   id: 'oracle',
   name: 'Oracle',
-  modelId: 'google/gemini-3-flash',
+  modelId: 'google/gemini-3-flash-preview',
   avatarUrl: '/avatars/oracle.svg',
   nameColor: '#b388ff',
   personality: 'Research, analysis, deep context',

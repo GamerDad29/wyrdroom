@@ -60,9 +60,9 @@ export const agentManifest: AgentManifestEntry[] = [
   {
     id: 'oracle',
     name: 'Oracle',
-    modelId: 'google/gemini-3-flash',
+    modelId: 'google/gemini-3-flash-preview',
     nameColor: '#b388ff',
-    displayName: 'Gemini 3 Flash (Oracle)',
+    displayName: 'Gemini 3 Flash Preview (Oracle)',
   },
   {
     id: 'jinx',
@@ -81,7 +81,7 @@ export const agentManifest: AgentManifestEntry[] = [
   {
     id: 'scout',
     name: 'Scout',
-    modelId: 'deepseek/deepseek-reasoner',
+    modelId: 'deepseek/deepseek-r1',
     nameColor: '#e07030',
     displayName: 'DeepSeek R1 (Scout)',
   },

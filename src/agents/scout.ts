@@ -3,7 +3,7 @@ import { AgentConfig } from '../types';
 export const scout: AgentConfig = {
   id: 'scout',
   name: 'Scout',
-  modelId: 'deepseek/deepseek-reasoner',
+  modelId: 'deepseek/deepseek-r1',
   avatarUrl: '/avatars/scout.svg',
   nameColor: '#e07030',
   personality: 'AI/tech researcher, trend spotter, landscape mapper',
